@@ -6,6 +6,14 @@ use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
+
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 
 use App\Models\utenti;
@@ -18,6 +26,25 @@ class mainController extends Controller
 {
 public function __construct()
 	{
+			
+			/*
+			admin_lotti:0-1-2
+			admin_pns	--->non implementato sul nuovo software: praticamente tutti fanno tutto ma è tutto tracciato ed ognuno può rimuovere la propria documentazione fornita
+			ruoli_cert : 1-2-4-5-6-7-10-999
+			admin_sos: 0-1-2-10, rst_sos (0-1)
+			admin_lp:1-10
+			admin_mp: 0-1-10
+				PROGRAMMA permessi
+					permessi_firma_cr
+					permessi_firma_r
+					permessi_firma_d
+			vest_access (NULL-0-1)
+			nc_access  NULL:0-1-2-3-4-5
+			-------------------------------------------------
+			store e reclami: non li includo in questo pannello
+			ruoli_micro (0-1-10-999) ->Aruba
+			*/
+			
 		
 		if (!Auth::user()) {
 				//non riesco ad invocare il logout
@@ -86,47 +113,7 @@ public function __construct()
 	
 	
 	public function dashboard(Request $request) {
-		/*
-		$last_ts_target=last_ts_target::where('id','=',1)->get();
-		//in caso di prima importazione decidere data fittizia di inizio import
-		$data_importdb="";
-		if (isset($last_ts_target[0])) {
-			$data_importdb=$last_ts_target[0]->last_ts;
-		}	
-		$datax=date("Y-m-d H:i:s");
-		$data1 = strtotime("-1 days", strtotime($datax));
 
-		$d2=date("Y-m-d H:i:s", $data1);
-		if (strlen($data_importdb)!=0 && $data_importdb<$d2) {
-			
-			$data_import=$data_importdb;
-		}
-		else {
-			
-			$data_import=$d2;
-		}	
-		
-		if (strlen($data_import)>0) $this->import_code($data_import);
-
-		if ($request->has("btn_save")) {
-			$email_notif=$request->input('email_notif');
-			$email_notif_green=$request->input('email_notif_green');
-			$codici_esclusi=$request->input('codici_esclusi');
-			$db_set = db_set::find(1);
-			if	(!isset($db_set)) $db_set=new db_set;
-			$db_set->email_notif=$email_notif;
-			$db_set->email_notif_green=$email_notif_green;
-			$db_set->codici_esclusi=$codici_esclusi;
-			$db_set->save();
-		}
-		$db_set = db_set::find(1);
-		$email_notif="";$email_notif_green="";$codici_esclusi="";
-		if	(isset($db_set)) {
-			$email_notif=$db_set->email_notif;
-			$email_notif_green=$db_set->email_notif_green;
-			$codici_esclusi=$db_set->codici_esclusi;
-		}
-		*/
 
 		$email_notif="";
 		$email_notif_green="";
@@ -138,11 +125,10 @@ public function __construct()
 		
 		
 		$utenti=DB::table('utenti')
-		->when($view_dele=="1", function ($utenti) {
-			return $utenti->whereNotNull('old_pw_for_disable');
+		->when($view_dele != "1", function ($query) {
+			return $query->where('attivo', 1);
 		})
 		->get();		
-		
 
 		return view('all_views/dashboard',compact('email_notif','email_notif_green','codici_esclusi','utenti','view_dele'));
 	
@@ -150,26 +136,94 @@ public function __construct()
 	
 	public function load_info(Request $request) {
 		$id_user = $request->input('id_user');
-		
-		$utenti=utenti::where('id', $id_user)->get();
-		echo json_encode($utenti);
+		$user=utenti::find($id_user);
+		return response()->json($user ? [$user] : []);
 	}	
 	
 	public function disable_user(Request $request) {
 		$id = $request->input('id_user');
-		$data=['old_pw_for_disable' => DB::raw('`passkey`') ,'passkey'=>'-----'];
+		//'old_pw_for_disable' => DB::raw('`passkey`') ,'passkey'=>'-----',
+		$data=['attivo'=>0,'ruoli_cert',999];
 		$up=utenti::where('id', $id)->update($data);
 		$resp=array("response"=>"OK");
-		echo json_encode($resp);
+		return response()->json($resp);
 	}	
 
 	public function enable_user(Request $request) {
 		$id = $request->input('id_user');
-		$data=['passkey' => DB::raw('`old_pw_for_disable`') ,'old_pw_for_disable'=>null];
+		//'passkey' => DB::raw('`old_pw_for_disable`') ,'old_pw_for_disable'=>null,
+		$data=['attivo'=>1];
 		$up=utenti::where('id', $id)->update($data);
 		$resp=array("response"=>"OK");
-		echo json_encode($resp);
+		return response()->json($resp);
 	}	
+
+	public function update_user(Request $request) {
+		$id_user = $request->input('id_user');
+
+		$validator = Validator::make($request->all(), [
+			'id_user' => 'required|exists:utenti,id',
+			'operatore' => 'required|string|min:5',
+			'userid' => [
+				'required',
+				'string',
+				'max:20',
+				Rule::unique('utenti')->ignore($id_user),
+			],
+			'email' => [
+				'nullable',
+				'email',
+				'max:255',
+				Rule::unique('utenti')->ignore($id_user),
+			],
+			'password' => [
+				'required',
+				'string',
+				'max:15',
+				//Password::min(8)->mixedCase()->numbers()->symbols()
+			],
+			'admin_lotti' => 'nullable|integer|in:0,1,2',
+			'ruoli_cert' => 'nullable|integer|in:1,2,4,5,6,7,10,999',
+			'admin_sos' => 'nullable|integer|in:0,1,2,10',
+			'rst_sos' => 'nullable|integer|in:0,1',
+			'admin_lp' => 'nullable|integer|in:1,10',
+			'admin_mp' => 'nullable|integer|in:0,1,10',
+			'vest_access' => 'nullable|integer|in:0,1',
+			'nc_access' => 'nullable|integer|in:0,1,2,3,4,5',
+		]);
+	
+		if ($validator->fails()) {
+			return response()->json([
+				'response' => 'KO', 
+				'message' => implode('<br>', $validator->errors()->all())
+			], 422);
+		}
+
+        $validated = $validator->validated();
+		$user = utenti::find($validated['id_user']);
+	
+		$user->operatore = $validated['operatore'];
+		$user->userid = $validated['userid'];
+		$user->email = $validated['email'];
+	
+		// Save the plain-text password for legacy apps
+		$user->passkey = $validated['password'];
+		// Hash the password for the 'password' column (for Laravel Auth)
+		$user->password_hash = Hash::make($validated['password']);
+	
+		$user->admin_lotti = $validated['admin_lotti'];
+		$user->ruoli_cert = $validated['ruoli_cert'];
+		$user->admin_sos = $validated['admin_sos'];
+		$user->rst_sos = $validated['rst_sos'];
+		$user->admin_lp = $validated['admin_lp'];
+		$user->admin_mp = $validated['admin_mp'];
+		$user->vest_access = $validated['vest_access'];
+		$user->nc_access = $validated['nc_access'];
+	
+		$user->save();
+	
+		return response()->json(['response' => 'OK', 'user' => $user]);
+	}
 		
 
 }

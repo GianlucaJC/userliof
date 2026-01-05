@@ -2,351 +2,289 @@
 use App\Models\User;
 	$id = Auth::user()->id;
 	$user = User::find($id);
-	
-
 ?>
-@extends('all_views.viewmaster.index')
 
-@section('title', 'UserLiof')
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-@section('extra_style') 
-	<link href="https://cdn.datatables.net/buttons/1.7.0/css/buttons.dataTables.min.css" rel="stylesheet">
-	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>	
-@endsection
+    <title>UserLiof - Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%23007bff' d='M487.4 315.7l-42.6-24.6c4.3-23.2 4.3-47 0-70.2l42.6-24.6c4.9-2.8 7.1-8.6 5.5-14-11.1-35.6-30-67.8-54.7-94.6-3.8-4.1-10-5.1-14.8-2.3L380.8 110c-17.9-15.4-38.5-27.3-60.8-35.1V25.8c0-5.6-3.9-10.5-9.4-11.7-36.7-8.2-74.3-7.8-109.2 0-5.5 1.2-9.4 6.1-9.4-11.7V75c-22.2 7.9-42.8 19.8-60.8 35.1L88.7 85.5c-4.9-2.8-11-1.9-14.8 2.3-24.7 26.7-43.6 58.9-54.7 94.6-1.7 5.4.6 11.2 5.5 14L67.3 221c-4.3 23.2-4.3 47 0 70.2l-42.6 24.6c-4.9 2.8-7.1 8.6-5.5 14 11.1 35.6 30 67.8 54.7 94.6 3.8 4.1 10 5.1 14.8 2.3l42.6-24.6c17.9 15.4 38.5 27.3 60.8 35.1v49.2c0 5.6 3.9 10.5 9.4 11.7 36.7 8.2 74.3 7.8 109.2 0 5.5-1.2 9.4-6.1-9.4-11.7v-49.2c22.2-7.9 42.8-19.8 60.8-35.1l42.6 24.6c4.9 2.8 11 1.9 14.8-2.3 24.7-26.7 43.6-58.9 54.7-94.6 1.5-5.4-.6-11.2-5.5-14zm-231.8-114c52.9 0 96 43.1 96 96s-43.1 96-96 96-96-43.1-96-96 43.1-96 96-96z'/></svg>" type="image/svg+xml">
 
-<style>
-#tb_utenti {
-    font-size: 12px;
-    table-layout: fixed;
+    <!-- Styles -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs5/jszip-2.5.0/dt-1.12.1/b-2.2.3/b-colvis-2.2.3/b-html5-2.2.3/b-print-2.2.3/datatables.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
 
-	.canc{
- 	 color:red;
-	 text-decoration: line-through;
+    <!-- Google Font: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-}
-}
- 
-td {
-    word-wrap: break-word;
-}
-</style>
+    <!-- Custom Styles -->
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Poppins', sans-serif;
+        }
+        .wrapper {
+            display: flex;
+            width: 100%;
+            align-items: stretch;
+        }
+        #sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background: #f8f9fa;
+            color: #333;
+            transition: all 0.3s;
+        }
+        #sidebar.active {
+            margin-left: -250px;
+        }
+        #sidebar .sidebar-header {
+            padding: 20px;
+            background: #e9ecef;
+            text-align: center;
+        }
+        #sidebar .sidebar-header h3 {
+            color: #495057;
+            font-weight: 600;
+        }
+        #sidebar ul.components {
+            padding: 20px 0;
+        }
+        #sidebar ul p {
+            color: #6c757d;
+            padding: 10px;
+        }
+        #sidebar ul li a {
+            padding: 10px;
+            font-size: 1.1em;
+            display: block;
+            color: #495057;
+            text-decoration: none;
+        }
+        #sidebar ul li a:hover {
+            color: #000;
+            background: #e9ecef;
+        }
+        #sidebar ul li.active > a, a[aria-expanded="true"] {
+            color: #fff;
+            background: #007bff;
+        }
+        #content {
+            width: 100%;
+            padding: 20px;
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+        #tb_utenti {
+            font-size: 12px;
+            table-layout: fixed;
+        }
+        .canc {
+            color: red;
+            text-decoration: line-through;
+        }
+        td {
+            word-wrap: break-word;
+        }
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -250px;
+            }
+            #sidebar.active {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
 
-@section('operazioni')
-
-<!-- Pannello gestione utenza !-->
-	<div class="p-3">
-		<h5>Impostazioni globali</h5>
-		<p>
-			<form method='post' action="{{ route('dashboard') }}" id='frm_global' name='frm_global' autocomplete="off" class="needs-validation" autocomplete="off">
-				<div class="form-group">
-					<label for="email_notif">Email notifiche edit/view/sign</label>
-					<textarea class="form-control" id="email_notif" name='email_notif' rows="3" placeholder='Usare punto e virgola per separare le email'>{{$email_notif ?? ''}}</textarea>
-				</div>
-
-				<div class="form-group">
-					<label for="email_notif_green">Email notifiche 'green'</label>
-					<textarea class="form-control" id="email_notif_green" name='email_notif_green' rows="3" placeholder='Usare punto e virgola per separare le email'>{{$email_notif_green ?? ''}}</textarea>
-				</div>
-				
-				
-				<div class="form-group">
-					<label for="codici_esclusi">Codici esclusi</label>
-					<textarea class="form-control" id="codici_esclusi" name='codici_esclusi' rows="3" disabled placeholder='Usare punto e virgola per separare i codici'>{{$codici_esclusi ?? ''}}</textarea>					
-				</div>
-
-			<button type="submit" id="btn_save" name="btn_save" value="1" class="btn btn-primary">Salva impostazioni</button>
-				
-			</form>	
-		</p>
-    </div>
-	
-	
-@endsection
-
-
-@section('notifiche') 
-
-	@if (1==2)
-      <li class="nav-item dropdown notif" onclick="azzera_notif()">
-        <a class="nav-link" data-toggle="dropdown" href="#">
-          <i class="far fa-bell"></i>
-          <span class="badge badge-warning navbar-badge">{{count($scadenze)}}</span>
-        </a>
-        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-          <span class="dropdown-header">Avvisi di scadenza</span>
-          <div class="dropdown-divider"></div>
-          <a href="#" class="dropdown-item">
-            <i class="fas fa-file-signature"></i> {{count($scadenze)}} {{$descr_num}} in scadenza
-            <span class="float-right text-muted text-sm"></span>
-          </a>
-          <div class="dropdown-divider"></div>
-
-          <div class="dropdown-divider"></div>
-          <div class="dropdown-divider"></div>
-          <a href="#" class="dropdown-item dropdown-footer">Vai al dettaglio</a>
+<div class="wrapper">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-users-cog me-2"></i>UserLiof</h3>
         </div>
-      </li>
-	@endif  
-@endsection
 
-@section('content_main')
+        <ul class="list-unstyled components">
+            <p>Menu Principale</p>
+            <li class="active">
+                <a href="{{ route('dashboard') }}"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
+            </li>
+            <li>
+                <a href="{{ route('rule_lotti') }}"><i class="fas fa-file-alt me-2"></i> Regole Lotti</a>
+            </li>
+            <!-- Aggiungi qui altri link per il menu -->
+            <hr>
+            <li>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <a href="{{ route('logout') }}"
+                            onclick="event.preventDefault(); this.closest('form').submit();">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Logout
+                    </a>
+                </form>
+            </li>
+        </ul>
+    </nav>
 
-  <!-- Content Wrapper. Contains page content -->
+    <!-- Page Content -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 shadow-sm">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-secondary d-md-none">
+                    <i class="fas fa-align-left"></i>
+                </button>
+                <h1 class="h3 mb-0">Dashboard Gestione Utenti</h1>
+                <div class="ms-auto">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSettings" aria-controls="offcanvasSettings">
+                        <i class="fas fa-cog"></i> Impostazioni Globali
+                    </button>
+                </div>
+            </div>
+        </nav>
 
-
-  
-  <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-      <div class="container-fluid">
-        <div class="row mb-2">
-          <div class="col-sm-6">
-            <h1 class="m-0">UserLiof - Definizione utenti Suite Custom Software | DASHBOARD</h1>
-          </div><!-- /.col -->
-          <div class="col-sm-6">
-            <ol class="breadcrumb float-sm-right">
-              <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-              
-            </ol>
-          </div><!-- /.col -->
-        </div><!-- /.row -->
-      </div><!-- /.container-fluid -->
-    </div>
-    <!-- /.content-header -->
-
-    <!-- Main content -->
-    <div class="content">
-      <div class="container-fluid">
-
-		<hr>
-
-		<!-- Edit user gestito via Vue (script in edit.js) !-->
-		<div id="app">
-			<App></App>
-		</div>		
-		
-
+        <!-- User list -->
 		<form method='post' action="{{ route('dashboard') }}" id='frm_utenti' name='frm_utenti' autocomplete="off">
 			@csrf
  			<input type="hidden" value="{{url('/')}}" id="url" name="url">
 			<input type="hidden" name="cur_page" id="cur_page" value="{{$cur_page ?? 0}}">
 
-			<?php
-			/*
-			admin_lotti:0-1-2
-			admin_pns	--->non implementato sul nuovo software: praticamente tutti fanno tutto ma è tutto tracciato ed ognuno può rimuovere la propria documentazione fornita
-			ruoli_cert : 1-2-4-5-6-7-10-999
-			admin_sos: 0-1-2-10, rst_sos (0-1)
-			admin_lp:1-10
-			admin_mp: 0-1-10
-				PROGRAMMA permessi
-					permessi_firma_cr
-					permessi_firma_r
-					permessi_firma_d
-			vest_access (NULL-0-1)
-			nc_access  NULL:0-1-2-3-4-5
-			-------------------------------------------------
-			store e reclami: non li includo in questo pannello
-			ruoli_micro (0-1-10-999) ->Aruba
-			*/
-			?>							
-		
+			<div class="card" id='div_elenco'>
+                <div class="card-header">
+                    Elenco Utenti
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id='tb_utenti' class="display table table-striped table-hover" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th style='width:210px'>Operazioni</th>
+                                    <th>UserID</th>
+                                    <th>Operatore</th>
+                                    <th style='width:150px'>Email</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($utenti as $utente)
+                                    @php
+                                        $cl = $utente->attivo != 1 ? "canc" : "";
+                                    @endphp
+                                    <tr id='tr{{$utente->id}}'>
+                                        <td id='td{{$utente->id}}'>
+                                            @if ($cl != "canc")
+                                                <div class="d-flex flex-nowrap">
+                                                    @if ($utente->id != "1")
+                                                        <button type='button' class="btn btn-warning btn-sm me-1" onclick="disable_user({{$utente->id}})" >
+                                                            <i class="fas fa-user-slash"></i> Disabilita
+                                                        </button>
+                                                    @endif
+                                                    <button type='button' class="btn btn-success btn-sm" onclick="edit_user({{$utente->id}})">
+                                                        <i class="fas fa-user-cog"></i> Modifica
+                                                    </button>
+                                                </div>
+                                            @else
+                                                <div class="text-center">
+                                                    <button type='button' onclick="enable_user({{$utente->id}})"  class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-user-plus"></i> Abilita
+                                                    </button>
+                                                </div>
+                                            @endif
+                                        </td>
+                                        <td class="{{$cl}}">{{$utente->userid}}</td>
+                                        <td class="{{$cl}}"><i>{{$utente->operatore}}</i></td>
+                                        <td style='width:150px'>{{$utente->email}}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-primary" disabled><i class="fas fa-user-plus"></i> Aggiungi utente</button>
+                    <div class="form-check form-switch d-inline-block mt-2 ms-3">
+                      <input class="form-check-input" type="checkbox" id="view_dele" name="view_dele" onchange="$('#frm_utenti').submit()" {{ ($view_dele ?? '0') == "1" ? "checked" : "" }}>
+                      <label class="form-check-label" for="view_dele">Mostra anche utenti disabilitati</label>
+                    </div>
+                </div>
+            </div>
 
-
-			<div class="col-md-12" id='div_elenco'>
-				<table id='tb_utenti' class="display">
-					<thead>
-						<tr>
-							<th style='width:200px'>Operazioni</th>
-							<th>UserID</th>
-							<th>Operatore</th>
-							<th>Password</th>
-							<th style='width:100px'>Email</th>
-
-							<th>Lotti</th>
-							<th>PNS</th>
-							<th>Cert</th>
-							<th>SOS</th>
-							<th>SOS1</th>
-							<th>Packing</th>
-							<th>MateriePrime</th>
-							<th>Vestizione</th>
-							<th>NonConformità</th>
-						</tr>
-					</thead>
-					<tbody>
-
-						
-						@foreach($utenti as $utente)
-							<?php
-								$cl="";
-								if ($utente->old_pw_for_disable!=null) $cl="canc"; 
-							?>	
-							<tr id='tr{{$utente->id}}'>
-								<td style='width:200px' id='td{{$utente->id}}'>
-									
-										@if ($cl!="canc")
-											@if ($utente->id!="1")
-												<button type='button' class="btn btn-warning btn-sm" onclick="disable_user({{$utente->id}})" disabled>
-													<i class="fas fa-user-slash"></i> Disabilita
-												</button>
-											@endif
-											
-											<button type='button' class="btn btn-success btn-sm" onclick="edit_user({{$utente->id}})" disabled>
-												<i class="fas fa-user-cog"></i> Modifica
-											</button>
-
-
-										@else
-											<center>
-												<button type='button' onclick="enable_user({{$utente->id}})"  class="btn btn-primary btn-sm">
-													<i class="fas fa-user-plus"></i> Abilita
-												</button>									
-											</center>
-										@endif
-									
-								</td>
-								<td class="{{$cl}}">
-									{{$utente->userid}} 
-								</td>
-								<td class="{{$cl}}">
-									<i>{{$utente->operatore}}</i>
-								</td>								
-								<td>
-									<input type='password' style='background: transparent;color: #000000;border:none;' readonly value='{{$utente->passkey}}'>
-								</td>
-								<td style='width:100px'>
-									{{$utente->email}} 
-								</td>
-
-								<td>
-
-								</td>								
-
-								<td>
-
-								</td>								
-								<td>
-
-								</td>								
-								<td>
-
-								</td>								
-								<td>
-
-								</td>								
-								<td>
-
-								</td>								
-								<td>
-
-								</td>								
-								<td>
-
-								</td>								
-								<td>
-
-								</td>								
-
-							</tr>
-						@endforeach
-					</tbody>
-					
-				</table>	
-
-			<?php
-				
-				$check="";
-				if ($view_dele=="1") $check="checked";
-			?>
-
-			<div class="row">
-			    <div class="col-lg-12">
-					<button type="button" class="btn btn-primary" disabled><i class="fa fa-user-plus"></i> Aggiungi utente</button>
-					
-					<div class="form-check form-switch mt-3 ml-3">
-					  <input class="form-check-input" type="checkbox" id="view_dele" name="view_dele" onchange="$('#frm_utenti').submit()" {{ $check }}>
-					  <label class="form-check-label" for="view_dele">Mostra utenti disabilitati</label>
-					</div>
-				</div>
-			</div>					
-				
-
-					
-			</div>
-			
-			
-			
-			
-			
-		
-			
-			
 			<!-- Modal -->
-			
-			<div class="modal fade bd-example-modal-lg" id="modalvalue" tabindex="-1" role="dialog" aria-labelledby="title_doc" aria-hidden="true">
+			<div class="modal fade" id="modalvalue" tabindex="-1" aria-labelledby="title_doc" aria-hidden="true">
 			  <div class="modal-dialog modal-lg">
 				<div class="modal-content">
 				  <div class="modal-header">
-					<h5 class="modal-title" id="title_doc">Inserimento dati</h5>
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-					  <span aria-hidden="true">&times;</span>
-					</button>
+					<h5 class="modal-title" id="title_doc">Modifica Utente e Permessi</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				  </div>
 				  <div class="modal-body" id='bodyvalue'>
-					...
+                      <!-- Vue app for editing, managed by edit.js -->
+                      <div id="app"><App></App></div>
 				  </div>
-				  <div id='div_wait' class='mb-3'></div>
-				  <div class="modal-footer">
-
-					
-					<div id='div_save'>
-					
-					</div>
-
-					<button type="button" class="btn btn-secondary" data-dismiss="modal" id='btn_close'>Chiudi</button>
-					
-				  </div>
-				  
 				</div>
 			  </div>
-			</div>			
-		</form>		
-
-				
-
-
-
-      </div><!-- /.container-fluid -->
+			</div>
+		</form>
     </div>
-    <!-- /.content -->
-  </div>
-  <!-- /.content-wrapper -->
-  
- @endsection
- 
-@section('content_plugin')
-	<!-- jQuery -->
-	<script src="plugins/jquery/jquery.min.js"></script>
-	<!-- Bootstrap 4 -->
-	<script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-	<!-- AdminLTE App -->
-	<script src="dist/js/adminlte.min.js"></script>
-	
-	<!-- inclusione standard
-		per personalizzare le dipendenze DataTables in funzione delle opzioni da aggiungere: https://datatables.net/download/
-	!-->
-	
-	<!-- dipendenze DataTables !-->
-	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.12.1/b-2.2.3/b-colvis-2.2.3/b-html5-2.2.3/b-print-2.2.3/datatables.min.css"/>
-		 
-		 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-		 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-		 <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.12.1/b-2.2.3/b-colvis-2.2.3/b-html5-2.2.3/b-print-2.2.3/datatables.min.js"></script>
-	 <!-- fine DataTables !-->	
-	
-	<script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.070"></script>
-	<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.123"></script>
-	
-	
-@endsection
+</div>
+
+<!-- Offcanvas for Global Settings -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasSettings" aria-labelledby="offcanvasSettingsLabel">
+    <div class="offcanvas-header">
+        <h5 id="offcanvasSettingsLabel">Impostazioni Globali</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form method='post' action="{{ route('dashboard') }}" id='frm_global' name='frm_global' autocomplete="off" class="needs-validation">
+            @csrf
+            <div class="mb-3">
+                <label for="email_notif" class="form-label">Email notifiche edit/view/sign</label>
+                <textarea class="form-control" id="email_notif" name='email_notif' rows="3" placeholder='Usare punto e virgola per separare le email'>{{$email_notif ?? ''}}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="email_notif_green" class="form-label">Email notifiche 'green'</label>
+                <textarea class="form-control" id="email_notif_green" name='email_notif_green' rows="3" placeholder='Usare punto e virgola per separare le email'>{{$email_notif_green ?? ''}}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="codici_esclusi" class="form-label">Codici esclusi</label>
+                <textarea class="form-control" id="codici_esclusi" name='codici_esclusi' rows="3" disabled placeholder='Usare punto e virgola per separare i codici'>{{$codici_esclusi ?? ''}}</textarea>
+            </div>
+            <button type="button" id="btn_save" name="btn_save" value="1" class="btn btn-primary">Salva impostazioni</button>
+        </form>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- DataTables & Plugins -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/v/bs5/jszip-2.5.0/dt-1.12.1/b-2.2.3/b-colvis-2.2.3/b-html5-2.2.3/b-print-2.2.3/datatables.min.js"></script>
+
+<!-- SweetAlert2 -->
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Custom App Scripts -->
+<script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.083"></script>
+<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.158"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#sidebarCollapse').on('click', function () {
+            $('#sidebar').toggleClass('active');
+        });
+    });
+</script>
+
+</body>
+</html>

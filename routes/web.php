@@ -27,8 +27,9 @@ Route::get('disable_user', [ 'as' => 'disable_user', 'uses' => 'App\Http\Control
 Route::post('enable_user', [ 'as' => 'enable_user', 'uses' => 'App\Http\Controllers\MainController@enable_user'])->middleware(['auth']);
 Route::get('enable_user', [ 'as' => 'enable_user', 'uses' => 'App\Http\Controllers\MainController@enable_user'])->middleware(['auth']);
 
-Route::post('load_info', [ 'as' => 'load_info', 'uses' => 'App\Http\Controllers\MainController@load_info'])->middleware(['auth']);
+
 Route::get('load_info', [ 'as' => 'load_info', 'uses' => 'App\Http\Controllers\MainController@load_info'])->middleware(['auth']);
+Route::post('update_user', [ 'as' => 'update_user', 'uses' => 'App\Http\Controllers\MainController@update_user'])->middleware(['auth']);
 
 //routes from regole lotti
 Route::get('rule_lotti', [ 'as' => 'rule_lotti', 'uses' => 'App\Http\Controllers\ControllerLotti@rule_lotti'])->middleware(['auth']);
