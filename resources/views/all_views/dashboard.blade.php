@@ -87,8 +87,12 @@ use App\Models\User;
             table-layout: fixed;
         }
         .canc {
-            color: red;
+            color: red !important;
             text-decoration: line-through;
+        }
+        /* Assicura che anche il testo in corsivo all'interno di .canc sia rosso */
+        .canc i {
+            color: inherit !important; /* Eredita il colore dal genitore, forzandolo */
         }
         td {
             word-wrap: break-word;
@@ -200,7 +204,7 @@ use App\Models\User;
                                         </td>
                                         <td class="{{$cl}}">{{$utente->userid}}</td>
                                         <td class="{{$cl}}"><i>{{$utente->operatore}}</i></td>
-                                        <td style='width:150px'>{{$utente->email}}</td>
+                                        <td class="{{$cl}}" style='width:150px'>{{$utente->email}}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
