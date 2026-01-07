@@ -276,7 +276,7 @@ use App\Models\User;
 
 <!-- Custom App Scripts -->
 <script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.083"></script>
-<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.159"></script>
+<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.160"></script>
 
 <script>
     $(document).ready(function () {

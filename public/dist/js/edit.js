@@ -44,12 +44,24 @@ function imposta_app() {
 									
 									
 									<div class="col-md-4">
-										<div class="form-group form-floating mb-3" v-show="showPasswordField">
+										<div class="form-group form-floating mb-3" v-show="showPasswordField" title="Visibile con CTRL+ALT+P">
 											<input type="text" onfocus="this.type='password'" class="form-control" id="user_pass" name="user_pass" placeholder="Password" v-model="password" autocomplete="new-password">
 											<div v-if="errors['password']">
 												{{ errors['password'] }}
 											</div>
 											<label for="user_pass">Password</label>
+										</div>
+
+										<button type="button" class="btn btn-outline-secondary mb-2" @click="toggleNewPassword">
+											{{ showNewPasswordField ? 'Annulla modifica password' : 'Modifica password' }}
+										</button>
+
+										<div class="form-group form-floating" v-if="showNewPasswordField">
+											<input type="password" class="form-control" id="new_user_pass" placeholder="Nuova Password" v-model="new_password" autocomplete="new-password">
+											<div v-if="errors['new_password']">
+												{{ errors['new_password'] }}
+											</div>
+											<label for="new_user_pass">Nuova Password</label>
 										</div>
 									</div>
 								</div>
@@ -165,6 +177,8 @@ function imposta_app() {
 				id_user,
 				showPasswordField: false,
 				btn_edit_active,
+				showNewPasswordField: false,
+				new_password: '',
 				edit,
 				operatore: '',
 				userid:'',
@@ -216,6 +230,16 @@ function imposta_app() {
                 });
             },
 
+			toggleNewPassword() {
+				this.showNewPasswordField = !this.showNewPasswordField;
+				if (!this.showNewPasswordField) {
+					this.new_password = '';
+					if (this.errors['new_password']) {
+						delete this.errors['new_password'];
+					}
+				}
+			},
+
 			handleKeyDown(e) {
 				// Ctrl + Alt + P to toggle password visibility
 				if (e.ctrlKey && e.altKey && (e.key === 'p' || e.key === 'P')) {
@@ -229,6 +253,8 @@ function imposta_app() {
 				this.id_user=0;
 				this.edit=false;
 				this.showPasswordField = false; // reset visibility
+				this.showNewPasswordField = false;
+				this.new_password = '';
 				// Remove listener when modal is closed
 				window.removeEventListener('keydown', this.handleKeyDown);
 				$('#modalvalue').modal('hide');
@@ -242,6 +268,7 @@ function imposta_app() {
 				document.getElementById('operatore').className = valid;
 				document.getElementById('userid').className = valid;
 				if (this.showPasswordField) document.getElementById('user_pass').className = valid;
+				if (this.showNewPasswordField) document.getElementById('new_user_pass').className = valid;
 				document.getElementById('email').className = valid;
 
 				// Operatore validate
@@ -266,6 +293,12 @@ function imposta_app() {
 					if (this.showPasswordField) document.getElementById('user_pass').className = invalid;
 				}	
 				*/
+
+				// new password validate
+				if (this.showNewPasswordField && this.new_password.length === 0) {
+					this.errors['new_password'] = "La nuova password non può essere vuota.";
+					document.getElementById('new_user_pass').className = invalid;
+				}
 				
 				// email validate
 				
@@ -286,13 +319,18 @@ function imposta_app() {
 			save_user() {
                 const metaElements = document.querySelectorAll('meta[name="csrf-token"]');
 				const csrf = metaElements.length > 0 ? metaElements[0].content : "";
-                
+
+				let password_to_send = this.password;
+				if (this.showNewPasswordField) {
+					password_to_send = this.new_password;
+				}
+
                 let formData = {
                     _token: csrf,
                     id_user: this.id_user,
                     operatore: this.operatore,
                     userid: this.userid,
-                    password: this.password,
+                    password: password_to_send,
                     email: this.email,
                     admin_lotti: this.admin_lotti,
                     ruoli_cert: this.ruoli_cert,
@@ -348,6 +386,7 @@ function imposta_app() {
 				this.userid=""
 				this.email=""
 				this.password=""
+				this.new_password=""
 				this.admin_lotti = null;
 				this.ruoli_cert = null;
 				this.admin_sos = null;
