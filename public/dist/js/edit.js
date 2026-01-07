@@ -72,15 +72,16 @@ function imposta_app() {
 									<div class="col-md-3 mb-3">
 										<label for="admin_lotti">Lotti</label>
 										<select class="form-select" id="admin_lotti" v-model="admin_lotti">
-											<option value="0">0 - User</option>
-											<option value="1">1 - Admin</option>
+											<option value="9">Disable</option>
+											<option value="0">User</option>
+											<option value="1">Admin</option>
 										</select>
 									</div>
 									<div class="col-md-3 mb-3">
 										<label for="ruoli_cert" @click="showCertInfo" style="cursor: pointer;">Certificati <i class="fas fa-info-circle text-primary"></i></label>
 										<select class="form-select" id="ruoli_cert" v-model="ruoli_cert">
-											<option value="999">999 - Disable</option>		
-											<option value="1">1 - Admin</option>
+											<option value="999">Disable</option>		
+											<option value="1">Admin</option>
 											<option value="2">2</option>
 											<option value="4">4</option>
 											<option value="5">5</option>
@@ -92,51 +93,52 @@ function imposta_app() {
 									<div class="col-md-3 mb-3">
 										<label for="admin_sos">SOS</label>
 										<select class="form-select" id="admin_sos" v-model="admin_sos">
-											<option value="0">0 - Manutentore</option>
-											<option value="1">1 - Utente</option>
-											<option value="2">2 Utente/Viewer</option>
-											<option value="10">10 - Admin</option>
+											<option value="9">Disable</option>	
+											<option value="0">Manutentore</option>
+											<option value="1">Utente</option>
+											<option value="2">Utente/Viewer</option>
+											<option value="10">Admin</option>
 										</select>
 									</div>
 									<div class="col-md-3 mb-3">
-										<label for="rst_sos">SOS1</label>
+										<label for="rst_sos">Firma SOS</label>
 										<select class="form-select" id="rst_sos" v-model="rst_sos">
-											<option value="0">0 - Standard</option>
-											<option value="1">1 - Responsabile Servizio Tecnico</option>
+											<option value="0">Standard</option>
+											<option value="1">Responsabile Servizio Tecnico</option>
 										</select>
 									</div>
 									<div class="col-md-3 mb-3">
 										<label for="admin_lp">Packing</label>
 										<select class="form-select" id="admin_lp" v-model="admin_lp">
-											<option value="10">10 - Disable</option>
-											<option value="1">1 - Admin</option>
+											<option value="10">Disable</option>
+											<option value="1">Admin</option>
 										</select>
 									</div>
 									<div class="col-md-3 mb-3">
 										<label for="admin_mp">Materie Prime</label>
 										<select class="form-select" id="admin_mp" v-model="admin_mp">
-											<option value="0">0 - Disable</option>
-											<option value="1">1 - Admin</option>
-											<option value="10">10 - User</option>
+											<option value="0">Disable</option>
+											<option value="1">Admin</option>
+											<option value="10">User</option>
 										</select>
 									</div>
 									<div class="col-md-3 mb-3">
 										<label for="vest_access">Vestizione</label>
 										<select class="form-select" id="vest_access" v-model="vest_access">
-											<option value="">NULL - Disable</option>
-											<option value="0">0 - User</option>
-											<option value="1">1 - Admin</option>
+											<option value="">Disable</option>
+											<option value="0">User</option>
+											<option value="1">Admin</option>
 										</select>
 									</div>
 									<div class="col-md-3 mb-3">
 										<label for="nc_access" @click="showNcInfo" style="cursor: pointer;">Non Conformità <i class="fas fa-info-circle text-primary"></i></label>
 										<select class="form-select" id="nc_access" v-model="nc_access">
-											<option value="0">0 - Disable</option>
-											<option value="1">1 - Admin</option>
-											<option value="2">2 - Segnalatore Base</option>
-											<option value="3">3 - Segnalatore Caporeparto</option>
-											<option value="4">4 - Valutatore</option>
-											<option value="5">5 - Eliminatore</option>
+											<option value="0">Disable</option>
+											<option value="1">Admin</option>
+											<option value="2">Segnalatore Base</option>
+											<option value="3">Segnalatore Caporeparto</option>
+											<option value="4">Valutatore</option>
+											<option value="5">Eliminatore</option>
 										</select>
 									</div>
 								</div>

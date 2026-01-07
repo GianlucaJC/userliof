@@ -143,7 +143,7 @@ public function __construct()
 	public function disable_user(Request $request) {
 		$id = $request->input('id_user');
 		//'old_pw_for_disable' => DB::raw('`passkey`') ,'passkey'=>'-----',
-		$data=['attivo'=>0,'ruoli_cert',999];
+		$data=['attivo' => 0, 'ruoli_cert' => 999];
 		$up=utenti::where('id', $id)->update($data);
 		$resp=array("response"=>"OK");
 		return response()->json($resp);
@@ -182,9 +182,9 @@ public function __construct()
 				'max:15',
 				//Password::min(8)->mixedCase()->numbers()->symbols()
 			],
-			'admin_lotti' => 'nullable|integer|in:0,1,2',
+			'admin_lotti' => 'nullable|integer|in:0,1,2,9',
 			'ruoli_cert' => 'nullable|integer|in:1,2,4,5,6,7,10,999',
-			'admin_sos' => 'nullable|integer|in:0,1,2,10',
+			'admin_sos' => 'nullable|integer|in:0,1,2,10,9',
 			'rst_sos' => 'nullable|integer|in:0,1',
 			'admin_lp' => 'nullable|integer|in:1,10',
 			'admin_mp' => 'nullable|integer|in:0,1,10',
