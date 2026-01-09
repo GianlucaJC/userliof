@@ -424,8 +424,8 @@ function imposta_app_regole() {
 
 
 				})
-				.catch(status, err => {
-					return console.log(status, err);
+				.catch(err => {
+					console.error("Errore durante il caricamento dei modelli:", err);
 				})
 					
 		  },
@@ -924,8 +924,8 @@ function testcodice() {
 			$("#div_resp_test").html(html)		
 
 		})
-		.catch(status, err => {
-			return console.log(status, err);
+		.catch(err => {
+			console.error("Errore durante il test del codice:", err);
 		})	
 	},300);
 	

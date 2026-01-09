@@ -399,8 +399,8 @@
 
 
 			})
-			.catch(status, err => {
-				return console.log(status, err);
+			.catch(err => {
+				console.error("Errore durante il caricamento dei modelli:", err);
 			})
 				
 	  },
@@ -544,8 +544,8 @@
 
 
 			})
-			.catch(status, err => {
-				return console.log(status, err);
+			.catch(err => {
+				console.error("Errore durante il salvataggio della regola 'inizia con':", err);
 			})	
 	  },
 
@@ -596,8 +596,8 @@
 				}
 
 			})
-			.catch(status, err => {
-				return console.log(status, err);
+			.catch(err => {
+				console.error("Errore durante il salvataggio della regola 'pattern':", err);
 			})	
 	  },
 

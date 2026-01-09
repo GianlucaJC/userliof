@@ -170,41 +170,57 @@ use App\Models\User;
                         <table id='tb_utenti' class="display table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
-                                    <th style='width:210px'>Operazioni</th>
+                                    <th style="width:210px">Operazioni</th>
                                     <th>UserID</th>
                                     <th>Operatore</th>
-                                    <th style='width:150px'>Email</th>
+                                    <th style="width:150px">Email</th>
+                                    <th class="text-center" style="width: 5%;">Interno</th>
+                                    <th class="text-center" style="width: 5%;">Esterno</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($utenti as $utente)
-                                    @php
-                                        $cl = $utente->attivo != 1 ? "canc" : "";
-                                    @endphp
-                                    <tr id='tr{{$utente->id}}'>
-                                        <td id='td{{$utente->id}}'>
-                                            @if ($cl != "canc")
-                                                <div class="d-flex flex-nowrap">
-                                                    @if ($utente->id != "1")
-                                                        <button type='button' class="btn btn-warning btn-sm me-1" onclick="disable_user({{$utente->id}})" >
-                                                            <i class="fas fa-user-slash"></i> Disabilita
+                                @foreach($combinedUsers as $user)
+                                    <tr id="tr{{ $user['id'] }}" class="{{ $user['is_deleted'] ? 'canc' : '' }}">
+                                        <td id="td{{ $user['id'] }}">
+                                            @if ($user['is_internal'])
+                                                @if ($user['is_deleted'])
+                                                    <div class="text-center">
+                                                        <button type='button' onclick="enable_user({{ $user['id'] }})"  class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-user-plus"></i> Abilita
                                                         </button>
-                                                    @endif
-                                                    <button type='button' class="btn btn-success btn-sm" onclick="edit_user({{$utente->id}})">
-                                                        <i class="fas fa-user-cog"></i> Modifica
-                                                    </button>
-                                                </div>
+                                                    </div>
+                                                @else
+                                                    <div class="d-flex flex-nowrap">
+                                                        @if ($user['id'] != "1")
+                                                            <button type='button' class="btn btn-warning btn-sm me-1" onclick="disable_user({{ $user['id'] }})" >
+                                                                <i class="fas fa-user-slash"></i> Disabilita
+                                                            </button>
+                                                        @endif
+                                                        <button type='button' class="btn btn-success btn-sm" onclick="edit_user({{ $user['id'] }})">
+                                                            <i class="fas fa-user-cog"></i> Modifica
+                                                        </button>
+                                                    </div>
+                                                @endif
                                             @else
+                                                {{-- Utente solo esterno: nessuna azione possibile da qui. --}}
                                                 <div class="text-center">
-                                                    <button type='button' onclick="enable_user({{$utente->id}})"  class="btn btn-primary btn-sm">
-                                                        <i class="fas fa-user-plus"></i> Abilita
-                                                    </button>
+                                                    <span class="text-muted fst-italic">Solo esterno</span>
                                                 </div>
                                             @endif
                                         </td>
-                                        <td class="{{$cl}}">{{$utente->userid}}</td>
-                                        <td class="{{$cl}}"><i>{{$utente->operatore}}</i></td>
-                                        <td class="{{$cl}}" style='width:150px'>{{$utente->email}}</td>
+                                        <td>{{ $user['userid'] }}</td>
+                                        <td><i>{{ $user['operatore'] }}</i></td>
+                                        <td>{{ $user['email'] }}</td>
+                                        <td class="text-center">
+                                            @if ($user['is_internal'])
+                                                <i class="fas fa-check-circle text-success" title="Utente presente nel sistema interno"></i>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if ($user['is_external'])
+                                                <i class="fas fa-check-circle text-primary" title="Utente presente nel sistema esterno"></i>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -222,7 +238,7 @@ use App\Models\User;
 
 			<!-- Modal -->
 			<div class="modal fade" id="modalvalue" tabindex="-1" aria-labelledby="title_doc" aria-hidden="true">
-			  <div class="modal-dialog modal-lg">
+			  <div class="modal-dialog modal-xl">
 				<div class="modal-content">
 				  <div class="modal-header">
 					<h5 class="modal-title" id="title_doc">Modifica Utente e Permessi</h5>
@@ -279,8 +295,8 @@ use App\Models\User;
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Custom App Scripts -->
-<script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.083"></script>
-<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.160"></script>
+<script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.084"></script>
+<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.199"></script>
 
 <script>
     $(document).ready(function () {
