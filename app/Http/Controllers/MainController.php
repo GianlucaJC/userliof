@@ -410,7 +410,8 @@ public function __construct()
         $is_external_check = $this->checkExternalUserExists($user->userid);
         $should_sync_external = !$is_external_check['error'] && ($is_external_check['exists'] || $request->input('wants_to_sync_external', false));
 
-        if ($should_sync_external && $request->has('permessi_firma_cr')) {
+      
+	    if ($should_sync_external && $request->has('permessi_firma_cr')) {
             $syncResult = $this->syncExternalPermissions($user->userid, $validated);
 
             if (!$syncResult['success']) {
@@ -423,6 +424,7 @@ public function __construct()
                 ]);
             }
         }
+		
 	
 		return response()->json(['response' => 'OK', 'user' => $user]);
 	}
@@ -454,6 +456,7 @@ public function __construct()
             'permessi_firma_r' => $permissions['permessi_firma_r'] ?? 0,
             'permessi_firma_d' => $permissions['permessi_firma_d'] ?? 0,
             'reparto' => $repartoString,
+            'passkey' => $permissions['password'], // Aggiungo la password in chiaro per la creazione
         ];
 
         try {
@@ -465,7 +468,7 @@ public function __construct()
                     return ['success' => true];
                 } else {
                     $errorMessage = $data['message'] ?? 'L\'API esterna ha restituito un errore sconosciuto.';
-                    Log::error("Errore sincronizzazione permessi per userid $userId: $errorMessage");
+                    Log::error("Errore sincronizzazione permessi per userid $userId: " . ($data['message'] ?? json_encode($data)));
                     return ['success' => false, 'message' => $errorMessage];
                 }
             } else {

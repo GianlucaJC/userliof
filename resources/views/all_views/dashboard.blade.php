@@ -166,7 +166,14 @@ use App\Models\User;
                     Elenco Utenti
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div id="users-table-loader" class="text-center p-5">
+                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Caricamento...</span>
+                        </div>
+                        <p class="mt-3 mb-0">Caricamento tabella utenti...</p>
+                    </div>
+                    <div class="table-responsive" style="display: none;">
+                        {{-- La tabella è nascosta di default e verrà mostrata da JavaScript una volta che DataTables ha finito di inizializzare. --}}
                         <table id='tb_utenti' class="display table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
@@ -225,7 +232,7 @@ use App\Models\User;
                                 @endforeach
                             </tbody>
                         </table>
-                    </div>
+                    </div> <!-- /.table-responsive -->
                 </div>
                 <div class="card-footer">
                     <button type="button" class="btn btn-primary" disabled><i class="fas fa-user-plus"></i> Aggiungi utente</button>
@@ -299,11 +306,50 @@ use App\Models\User;
 <script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.199"></script>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         $('#sidebarCollapse').on('click', function () {
             $('#sidebar').toggleClass('active');
         });
     });
+
+    // Script per gestire la visualizzazione della tabella utenti con loader
+    (function($) {
+        var $loader = $('#users-table-loader');
+        var $container = $('#tb_utenti').closest('.table-responsive');
+        var startTime = new Date().getTime();
+        var minDisplayTime = 400; // Ritardo minimo in millisecondi per mostrare lo spinner.
+
+        // Funzione per nascondere il loader e mostrare la tabella, rispettando il tempo minimo
+        var completeLoading = function() {
+            var elapsedTime = new Date().getTime() - startTime;
+            var timeToShow = minDisplayTime - elapsedTime;
+
+            if (timeToShow < 0) {
+                timeToShow = 0;
+            }
+
+            setTimeout(function() {
+                $loader.hide();
+                $container.show();
+            }, timeToShow);
+        };
+
+        var checkInterval = setInterval(function() {
+            if ($('#tb_utenti').hasClass('dataTable')) {
+                clearInterval(checkInterval);
+                checkInterval = null; // Pulisce la variabile per il timeout di sicurezza
+                completeLoading();
+            }
+        }, 100); // Controlla ogni 100ms
+
+        setTimeout(function() {
+            if (checkInterval) { // Se il controllo è ancora attivo dopo 5 secondi (timeout di sicurezza)
+                clearInterval(checkInterval);
+                $loader.hide();
+                $container.show(); // Forza la visualizzazione per evitare blocchi
+            }
+        }, 5000);
+    })(jQuery);
 </script>
 
 </body>
