@@ -44,24 +44,25 @@ function imposta_app() {
 									
 									
 									<div class="col-md-4">
-										<div class="form-group form-floating mb-3" v-show="showPasswordField" title="Visibile con CTRL+ALT+P">
+										<!-- Mostra campo password esistente solo per utenti già creati -->
+										<div class="form-group form-floating mb-3" v-if="id_user !== 0" v-show="showPasswordField" title="Visibile con CTRL+ALT+P">
 											<input type="text" onfocus="this.type='password'" class="form-control" id="user_pass" name="user_pass" placeholder="Password" v-model="password" autocomplete="new-password">
 											<div v-if="errors['password']">
 												{{ errors['password'] }}
 											</div>
 											<label for="user_pass">Password</label>
 										</div>
-
-										<button type="button" class="btn btn-outline-secondary mb-2" @click="toggleNewPassword">
+										<!-- Mostra bottone "Modifica password" solo per utenti esistenti -->
+										<button type="button" class="btn btn-outline-secondary mb-2" v-if="id_user !== 0" @click="toggleNewPassword">
 											{{ showNewPasswordField ? 'Annulla modifica password' : 'Modifica password' }}
 										</button>
-
-										<div class="form-group form-floating" v-if="showNewPasswordField">
+										<!-- Mostra campo nuova password se si sta modificando o creando un utente da zero -->
+										<div class="form-group form-floating" v-if="showNewPasswordField || (id_user === 0 && !is_external)">
 											<input type="password" class="form-control" id="new_user_pass" placeholder="Nuova Password" v-model="new_password" autocomplete="new-password">
-											<div v-if="errors['new_password']">
+											<label for="new_user_pass">{{ (id_user === 0 && !is_external) ? 'Password (obbligatoria)' : 'Nuova Password' }}</label>
+											<div v-if="errors['new_password']" class="text-danger small pt-1">
 												{{ errors['new_password'] }}
 											</div>
-											<label for="new_user_pass">Nuova Password</label>
 										</div>
 									</div>
 								</div>
@@ -79,94 +80,115 @@ function imposta_app() {
 								</div>
 
 								<hr>
-								<h5>Permessi Applicativi Interni</h5>
-								<div class="row">
-									<div class="col-md-3 mb-3">
-										<label for="admin_lotti">Lotti</label>
-										<select class="form-select" id="admin_lotti" v-model="admin_lotti">
-											<option value="9">Disable</option>
-											<option value="0">User</option>
-											<option value="1">Admin</option>
-										</select>
+
+								<!-- Logica per la creazione di un utente interno da uno esterno -->
+								<div v-if="!is_internal">
+									<div class="form-check form-switch mb-3">
+										<input class="form-check-input" type="checkbox" role="switch" id="createInternalSwitch" v-model="wants_to_create_internal">
+										<label class="form-check-label" for="createInternalSwitch">Crea/Abilita utente anche su sistema interno</label>
 									</div>
-									<div class="col-md-3 mb-3">
-										<label for="ruoli_cert" @click="showCertInfo" style="cursor: pointer;">Certificati <i class="fas fa-info-circle text-primary"></i></label>
-										<select class="form-select" id="ruoli_cert" v-model="ruoli_cert">
-											<option value="999">Disable</option>		
-											<option value="1">Admin</option>
-											<option value="2">2</option>
-											<option value="4">4</option>
-											<option value="5">5</option>
-											<option value="6">6</option>
-											<option value="7">7</option>
-											<option value="10">10</option>
-										</select>
+
+									<div v-if="wants_to_create_internal" class="mb-3">
+										<label class="form-label fw-bold">Seleziona applicazioni interne da abilitare:</label>
+										<div class="border rounded p-2">
+											<div class="form-check" v-for="app in available_internal_apps" :key="app.id">
+												<input class="form-check-input" type="checkbox" :value="app.id" :id="'int_app_' + app.id" v-model="selected_internal_apps">
+												<label class="form-check-label" :for="'int_app_' + app.id">{{ app.name }}</label>
+											</div>
+										</div>
 									</div>
-									<div class="col-md-3 mb-3">
-										<label for="admin_sos">SOS</label>
-										<select class="form-select" id="admin_sos" v-model="admin_sos">
-											<option value="9">Disable</option>	
-											<option value="0">Manutentore</option>
-											<option value="1">Utente</option>
-											<option value="2">Utente/Viewer</option>
-											<option value="10">Admin</option>
-										</select>
-									</div>
-									<div class="col-md-3 mb-3">
-										<label for="rst_sos">Firma SOS</label>
-										<select class="form-select" id="rst_sos" v-model="rst_sos">
-											<option value="0">Standard</option>
-											<option value="1">Responsabile Servizio Tecnico</option>
-										</select>
-									</div>
-									<div class="col-md-3 mb-3">
-										<label for="admin_lp">Packing</label>
-										<select class="form-select" id="admin_lp" v-model="admin_lp">
-											<option value="10">Disable</option>
-											<option value="1">Admin</option>
-										</select>
-									</div>
-									<div class="col-md-3 mb-3">
-										<label for="admin_mp">Materie Prime</label>
-										<select class="form-select" id="admin_mp" v-model="admin_mp">
-											<option value="0">Disable</option>
-											<option value="1">Admin</option>
-											<option value="10">User</option>
-										</select>
-									</div>
-									<div class="col-md-3 mb-3">
-										<label for="vest_access">Vestizione</label>
-										<select class="form-select" id="vest_access" v-model="vest_access">
-											<option value="">Disable</option>
-											<option value="0">User</option>
-											<option value="1">Admin</option>
-										</select>
-									</div>
-									<div class="col-md-3 mb-3">
-										<label for="nc_access" @click="showNcInfo" style="cursor: pointer;">Non Conformità <i class="fas fa-info-circle text-primary"></i></label>
-										<select class="form-select" id="nc_access" v-model="nc_access">
-											<option value="0">Disable</option>
-											<option value="1">Admin</option>
-											<option value="2">Segnalatore Base</option>
-											<option value="3">Segnalatore Caporeparto</option>
-											<option value="4">Valutatore</option>
-											<option value="5">Eliminatore</option>
-										</select>
+								</div>
+
+								<!-- Sezione Permessi Interni (visibile per utenti interni o durante la creazione) -->
+								<div v-if="is_internal || wants_to_create_internal">
+									<h5>Permessi Applicativi Interni</h5>
+									<div class="row">
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('lotti')">
+											<label for="admin_lotti">Lotti</label>
+											<select class="form-select" id="admin_lotti" v-model="admin_lotti">
+												<option value="9">Disable</option>
+												<option value="0">User</option>
+												<option value="1">Admin</option>
+											</select>
+										</div>
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('certificati')">
+											<label for="ruoli_cert" @click="showCertInfo" style="cursor: pointer;">Certificati <i class="fas fa-info-circle text-primary"></i></label>
+											<select class="form-select" id="ruoli_cert" v-model="ruoli_cert">
+												<option value="999">Disable</option>		
+												<option value="1">Admin</option>
+												<option value="2">2</option>
+												<option value="4">4</option>
+												<option value="5">5</option>
+												<option value="6">6</option>
+												<option value="7">7</option>
+												<option value="10">10</option>
+											</select>
+										</div>
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('sos')">
+											<label for="admin_sos">SOS</label>
+											<select class="form-select" id="admin_sos" v-model="admin_sos">
+												<option value="9">Disable</option>	
+												<option value="0">Manutentore</option>
+												<option value="1">Utente</option>
+												<option value="2">Utente/Viewer</option>
+												<option value="10">Admin</option>
+											</select>
+										</div>
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('sos')">
+											<label for="rst_sos">Firma SOS</label>
+											<select class="form-select" id="rst_sos" v-model="rst_sos">
+												<option value="0">Standard</option>
+												<option value="1">Responsabile Servizio Tecnico</option>
+											</select>
+										</div>
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('packing')">
+											<label for="admin_lp">Packing</label>
+											<select class="form-select" id="admin_lp" v-model="admin_lp">
+												<option value="10">Disable</option>
+												<option value="1">Admin</option>
+											</select>
+										</div>
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('materie_prime')">
+											<label for="admin_mp">Materie Prime</label>
+											<select class="form-select" id="admin_mp" v-model="admin_mp">
+												<option value="0">Disable</option>
+												<option value="1">Admin</option>
+												<option value="10">User</option>
+											</select>
+										</div>
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('vestizione')">
+											<label for="vest_access">Vestizione</label>
+											<select class="form-select" id="vest_access" v-model="vest_access">
+												<option value="">Disable</option>
+												<option value="0">User</option>
+												<option value="1">Admin</option>
+											</select>
+										</div>
+										<div class="col-md-3 mb-3" v-if="is_internal || selected_internal_apps.includes('nc')">
+											<label for="nc_access" @click="showNcInfo" style="cursor: pointer;">Non Conformità <i class="fas fa-info-circle text-primary"></i></label>
+											<select class="form-select" id="nc_access" v-model="nc_access">
+												<option value="0">Disable</option>
+												<option value="1">Admin</option>
+												<option value="2">Segnalatore Base</option>
+												<option value="3">Segnalatore Caporeparto</option>
+												<option value="4">Valutatore</option>
+												<option value="5">Eliminatore</option>
+											</select>
+										</div>
 									</div>
 								</div>
 
 								<hr>
 								<h5>Permessi Applicativi Esterni</h5>
 
-								<!-- Se l'utente è solo interno, mostra lo switch per la promozione -->
-								<div v-if="is_internal && !is_external">
-									<!-- 1. Switch per promuovere -->
+								<!-- Se l'utente NON è esterno, mostra lo switch per crearlo/abilitarlo -->
+								<div v-if="!is_external">
 									<div class="form-check form-switch mb-3">
 										<input class="form-check-input" type="checkbox" role="switch" id="syncExternalSwitch" v-model="wants_to_sync_external">
-										<label class="form-check-label" for="syncExternalSwitch">Crea/Abilita utente anche su sistema esterno</label>
+										<label class="form-check-label" for="syncExternalSwitch">Crea/Abilita utente su sistema esterno</label>
 									</div>
 
-									<!-- 2. Selezione delle APP esterne, mostrata solo durante la promozione -->
+									<!-- Selezione delle APP esterne, mostrata solo se lo switch è attivo -->
 									<div v-if="wants_to_sync_external" class="mb-3">
 										<label class="form-label fw-bold">Seleziona applicazioni esterne da abilitare:</label>
 										<div class="border rounded p-2">
@@ -177,9 +199,8 @@ function imposta_app() {
 										</div>
 									</div>
 								</div>
-
 								<!-- Altrimenti, se l'utente è già esterno, mostra il box informativo -->
-								<div v-else-if="is_external" class="mb-3">
+								<div v-else class="mb-3">
 									<label class="form-label fw-bold">Applicazioni esterne abilitate:</label>
 									<div class="border rounded p-2 bg-light">
 										<p class="mb-0">APP Permessi</p>
@@ -276,11 +297,25 @@ function imposta_app() {
 				permessi_reparti: [],
 				reparti_options: [],
 				externalServiceAvailable: true,
+				external_passkey: '', // Memorizza la password (in chiaro) recuperata dal sistema esterno
+				// --- Permessi Esterni ---
 				available_external_apps: [{ id: 'permessi_app', name: 'APP Permessi' }],
 				selected_external_apps: [],
 				is_internal: false,
 				is_external: false,
 				wants_to_sync_external: false,
+				// --- Permessi Interni (per creazione da esterno) ---
+				wants_to_create_internal: false,
+				selected_internal_apps: [],
+				available_internal_apps: [
+					{ id: 'lotti', name: 'Lotti' },
+					{ id: 'certificati', name: 'Certificati' },
+					{ id: 'sos', name: 'SOS (include Firma SOS)' },
+					{ id: 'packing', name: 'Packing' },
+					{ id: 'materie_prime', name: 'Materie Prime' },
+					{ id: 'vestizione', name: 'Vestizione' },
+					{ id: 'nc', name: 'Non Conformità' }
+    			],
 				errors: {}
 			}
 		},
@@ -291,8 +326,10 @@ function imposta_app() {
 		},
 		computed: {
 			isSaveButtonDisabled() {
-				// Disabled if no user is loaded (id_user is the trigger)
-				if (!this.id_user) {
+				// Disabilita il pulsante se il form non è in modalità di modifica/creazione.
+				// this.edit è il vero indicatore che un'operazione è in corso,
+				// poiché this.id_user === 0 è ambiguo (usato sia per "nuovo utente" che per "nessun utente caricato").
+				if (!this.edit) {
 					return true;
 				}
 
@@ -321,7 +358,24 @@ function imposta_app() {
 		},		
 		methods: {
 
-			loadExternalPermissions(userid) {
+			create_new() {
+				this.emptyinfo();
+				this.id_user = 0;
+				this.edit = true;
+				this.is_internal = false;
+				this.is_external = false;
+				this.password = ''; // Inutile per nuovo utente, ma pulito
+				// Add listener for password shortcut
+				window.addEventListener('keydown', this.handleKeyDown);
+			},
+
+			/**
+			 * Carica i dati di un utente dal sistema esterno (permessi e password).
+			 * NOTA: Si assume che l'endpoint API `get_user_permissions` restituisca
+			 * anche la `passkey` in chiaro, come da specifica.
+			 * @param {string} userid 
+			 */
+			loadExternalData(userid) {
 				const apiUrl = 'https://www.liofilchemstore.it/servizi/api_login_ext.php';
 				const apiToken = 'un-token-segreto-molto-sicuro-da-cambiare';
 
@@ -351,17 +405,22 @@ function imposta_app() {
 						} else {
 							this.permessi_reparti = [];
 						}
+
+						// Memorizza la password in chiaro proveniente dal sistema esterno
+						this.external_passkey = perms.passkey || '';
 					} else {
 						// User might not exist externally, which is fine. Reset fields.
 						this.permessi_firma_cr = 0;
 						this.permessi_firma_r = 0;
 						this.permessi_firma_d = 0;
 						this.permessi_reparti = [];
+						this.external_passkey = '';
 						console.warn('Could not load external permissions for user:', userid, data.message);
 					}
 				})
 				.catch(error => {
 					console.error('Error fetching external permissions:', error);
+					this.external_passkey = '';
 				});
 			},
 
@@ -474,6 +533,9 @@ function imposta_app() {
 				this.new_password = '';
 				this.wants_to_sync_external = false;
 				this.selected_external_apps = [];
+				this.wants_to_create_internal = false;
+				this.external_passkey = '';
+				this.selected_internal_apps = [];
 				// Remove listener when modal is closed
 				window.removeEventListener('keydown', this.handleKeyDown);
 				$('#modalvalue').modal('hide');
@@ -481,56 +543,68 @@ function imposta_app() {
 
 			validate() {
 				this.errors = {};
-				var len = this.operatore.length;
-				valid="form-control is-valid"
-				invalid="form-control is-invalid"
-				document.getElementById('operatore').className = valid;
-				document.getElementById('userid').className = valid;
-				if (this.showPasswordField) document.getElementById('user_pass').className = valid;
-				if (this.showNewPasswordField) document.getElementById('new_user_pass').className = valid;
-				document.getElementById('email').className = valid;
+				const valid = "form-control is-valid";
+				const invalid = "form-control is-invalid";
+				let hasErrors = false;
 
 				// Operatore validate
-				if (len > 30) {
-					this.errors['operatore']="Il campo operatore deve essere meno di 30 caratteri."
+				if (!this.operatore || this.operatore.trim().length === 0) {
+					this.errors['operatore'] = "Il campo operatore è obbligatorio.";
+					document.getElementById('operatore').className = invalid;
+					hasErrors = true;
+				} else if (this.operatore.length > 30) {
+					this.errors['operatore'] = "Il campo operatore deve essere meno di 30 caratteri.";
 				 	document.getElementById('operatore').className = invalid;
+					hasErrors = true;
+				} else {
+					document.getElementById('operatore').className = valid;
 				}
 				
 				// userID validate
-				var len = this.userid.length;
-				if (len > 15) {
-					this.errors['user']="Il campo userID deve essere meno di 15 caratteri."
+				if (!this.userid || this.userid.trim().length === 0) {
+					this.errors['user'] = "Il campo userID è obbligatorio.";
 					document.getElementById('userid').className = invalid;
-				}	
-
-
-				// pw validate
-				var regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@.#$!%*?&])[A-Za-z\d@.#$!%*?&]{8,15}$/;
-				/*
-				if(this.password.match(regex) == null)  {
-					this.errors['password']="Almeno un carattere minuscolo, almeno un carattere maiuscolo, almeno una cifra numerica, almeno un carattere speciale. Inoltre, la lunghezza totale deve essere compresa nell'intervallo [8-15]"
-					if (this.showPasswordField) document.getElementById('user_pass').className = invalid;
-				}	
-				*/
+					hasErrors = true;
+				} else if (this.userid.length > 15) {
+					this.errors['user'] = "Il campo userID deve essere meno di 15 caratteri.";
+					document.getElementById('userid').className = invalid;
+					hasErrors = true;
+				} else {
+					document.getElementById('userid').className = valid;
+				}
 
 				// new password validate
-				if (this.showNewPasswordField && this.new_password.length === 0) {
-					this.errors['new_password'] = "La nuova password non può essere vuota.";
-					document.getElementById('new_user_pass').className = invalid;
+				const isNewUser = this.id_user === 0 && !this.is_external;
+				const passField = document.getElementById('new_user_pass');
+				if (passField && (this.showNewPasswordField || isNewUser)) {
+					if (this.new_password.length === 0) {
+						this.errors['new_password'] = isNewUser ? "La password è obbligatoria." : "La nuova password non può essere vuota.";
+						passField.className = invalid;
+						hasErrors = true;
+					} else {
+						passField.className = valid;
+					}
 				}
 				
 				// email validate
-				
 				if (this.email.length>0) {
-					var regex= /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+					const regex= /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 					if(this.email.match(regex) == null) {
 						this.errors['email']="Inserire una mail valida"
 						document.getElementById('email').className = invalid;
+						hasErrors = true;
+					} else {
+						document.getElementById('email').className = valid;
+					}
+				} else {
+					document.getElementById('email').className = valid; // Nullable is ok
 				}
-			}
 
-				if (Object.keys(this.errors).length > 0) {
-                    return false; // Stop if errors
+				if (hasErrors) {
+                    // Mostra un avviso con il primo errore trovato, per coerenza con il comportamento atteso
+                    const firstError = Object.values(this.errors)[0];
+                    Swal.fire('Dati mancanti o non validi', firstError, 'error');
+                    return false;
                 }
                 this.save_user();
 			},
@@ -538,10 +612,17 @@ function imposta_app() {
 			save_user() {
                 const metaElements = document.querySelectorAll('meta[name="csrf-token"]');
 				const csrf = metaElements.length > 0 ? metaElements[0].content : "";
+				
+				let password_to_send;
+				const isNewUser = this.id_user === 0 && !this.is_external;
+				const isCreatingFromExternal = this.id_user === 0 && this.is_external;
 
-				let password_to_send = this.password;
-				if (this.showNewPasswordField) {
+				if (isCreatingFromExternal) {
+					password_to_send = this.external_passkey;
+				} else if (isNewUser || this.showNewPasswordField) {
 					password_to_send = this.new_password;
+				} else {
+					password_to_send = this.password;
 				}
 
                 let formData = {
@@ -559,7 +640,8 @@ function imposta_app() {
                     admin_mp: this.admin_mp,
                     vest_access: this.vest_access,
                     nc_access: this.nc_access,
-					wants_to_sync_external: this.wants_to_sync_external
+					wants_to_sync_external: this.wants_to_sync_external,
+					wants_to_create_internal: this.wants_to_create_internal
                 };
 
 				// Aggiungi i permessi esterni solo se il servizio è risultato disponibile
@@ -643,27 +725,56 @@ function imposta_app() {
 				this.permessi_firma_r = 0;
 				this.permessi_firma_d = 0;
 				this.permessi_reparti = [];
+				this.external_passkey = '';
 				this.is_internal = false;
 				this.selected_external_apps = [];
 				this.is_external = false;
+				this.wants_to_create_internal = false;
+				this.selected_internal_apps = [];
 				this.wants_to_sync_external = false;
 			},
 
-			load_info(id_user) {
-				//<meta name="csrf-token" content="{{{ csrf_token() }}}"> //da inserire in html
+			load_info(userInfo) {
 				this.emptyinfo();
+
+				// Se userInfo è un oggetto, lo usiamo per pre-compilare il form per un nuovo utente.
+				if (typeof userInfo === 'object' && userInfo !== null) {
+					// Imposta l'ID a 0 (non triggera il watcher) e popola i dati.
+					this.id_user = 0; 
+					this.operatore = userInfo.name;
+					this.userid = userInfo.username;
+					this.email = userInfo.email;
+					this.is_internal = false;
+					this.is_external = true; // Proviene da un utente esterno
+					this.edit = true; // Mostra il form
+					this.password = ''; // Nessuna password da mostrare per un utente non ancora creato
+					
+					// Dato che l'utente esiste già esternamente, carichiamo i suoi permessi esterni.
+					// I permessi interni rimangono vuoti/default grazie a emptyinfo().
+					if (this.externalServiceAvailable) {
+						this.loadExternalData(this.userid);
+					}
+
+					window.addEventListener('keydown', this.handleKeyDown);
+					return; // Esce per non eseguire il fetch
+				}
+
+				// Altrimenti, userInfo è un id_user, carichiamo un utente esistente.
+				const id_user = userInfo;
+				if (!id_user) return;
+
 				const metaElements = document.querySelectorAll('meta[name="csrf-token"]');
 				const csrf = metaElements.length > 0 ? metaElements[0].content : "";			
 				fetch("load_info?id_user="+id_user, {
 					method: 'get',
 					headers: {
-					  "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-					  "X-CSRF-Token": csrf
+						"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+						"X-CSRF-Token": csrf
 					},
 				})
 				.then(response => {
 					if (response.ok) {
-					   return response.json();
+						return response.json();
 					}
 				})
 				.then(resp=>{
@@ -673,13 +784,13 @@ function imposta_app() {
 						this.password = resp[0].passkey;
 						this.email = resp[0].email || '';
 						this.admin_lotti = resp[0].admin_lotti;
-                        this.ruoli_cert = resp[0].ruoli_cert;
-                        this.admin_sos = resp[0].admin_sos;
-                        this.rst_sos = resp[0].rst_sos;
-                        this.admin_lp = resp[0].admin_lp;
-                        this.admin_mp = resp[0].admin_mp;
-                        this.vest_access = resp[0].vest_access ?? '';
-                        this.nc_access = resp[0].nc_access ?? 0;
+						this.ruoli_cert = resp[0].ruoli_cert;
+						this.admin_sos = resp[0].admin_sos;
+						this.rst_sos = resp[0].rst_sos;
+						this.admin_lp = resp[0].admin_lp;
+						this.admin_mp = resp[0].admin_mp;
+						this.vest_access = resp[0].vest_access ?? '';
+						this.nc_access = resp[0].nc_access ?? 0;
 						
 						this.is_internal = resp[0].is_internal;
 						this.is_external = resp[0].is_external;
@@ -687,16 +798,8 @@ function imposta_app() {
 
 						// Carica i permessi esterni (sovrascrivendo eventuali cache locali)
 						if (this.externalServiceAvailable) {
-							this.loadExternalPermissions(this.userid);
+							this.loadExternalData(this.userid);
 						}
-						/*
-                        this.permessi_firma_cr = resp[0].permessi_firma_cr ?? 0;
-                        this.permessi_firma_r = resp[0].permessi_firma_r ?? 0;
-                        this.permessi_firma_d = resp[0].permessi_firma_d ?? 0;
-						this.permessi_reparti = resp[0].permessi_reparti ?? '';
-
-						//this.resp=resp
-					*/
 					}
 				})
 				.catch(err => {

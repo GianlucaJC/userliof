@@ -209,9 +209,14 @@ use App\Models\User;
                                                     </div>
                                                 @endif
                                             @else
-                                                {{-- Utente solo esterno: nessuna azione possibile da qui. --}}
-                                                <div class="text-center">
-                                                    <span class="text-muted fst-italic">Solo esterno</span>
+                                                {{-- Utente solo esterno: opzioni per modifica o disabilitazione --}}
+                                                <div class="d-flex flex-nowrap">
+                                                    <button type='button' class="btn btn-warning btn-sm me-1" onclick="alert('Funzione per disabilitare utente solo esterno da implementare.')" >
+                                                        <i class="fas fa-user-slash"></i> Disabilita
+                                                    </button>
+                                                    <button type='button' class="btn btn-success btn-sm" onclick="edit_external_user('{{ addslashes($user['operatore']) }}', '{{ $user['email'] }}', '{{ $user['userid'] }}')">
+                                                        <i class="fas fa-user-cog"></i> Modifica
+                                                    </button>
                                                 </div>
                                             @endif
                                         </td>
@@ -235,7 +240,7 @@ use App\Models\User;
                     </div> <!-- /.table-responsive -->
                 </div>
                 <div class="card-footer">
-                    <button type="button" class="btn btn-primary" disabled><i class="fas fa-user-plus"></i> Aggiungi utente</button>
+                    <button type="button" class="btn btn-primary" onclick="add_new_user()"><i class="fas fa-user-plus"></i> Aggiungi utente</button>
                     <div class="form-check form-switch d-inline-block mt-2 ms-3">
                       <input class="form-check-input" type="checkbox" id="view_dele" name="view_dele" onchange="$('#frm_utenti').submit()" {{ ($view_dele ?? '0') == "1" ? "checked" : "" }}>
                       <label class="form-check-label" for="view_dele">Mostra anche utenti disabilitati</label>
@@ -302,10 +307,52 @@ use App\Models\User;
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Custom App Scripts -->
-<script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.084"></script>
-<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.199"></script>
+<script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.085"></script>
+<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.207"></script>
 
 <script>
+    /**
+     * Apre la modale per creare un utente completamente nuovo (non presente
+     * né nel sistema interno né in quello esterno).
+     */
+    function add_new_user() {
+        try {
+            $('#title_doc').text('Aggiungi Nuovo Utente');
+            window.moduloEdit.create_new(); // Chiama il nuovo metodo in Vue
+            $('#modalvalue').modal('show');
+        } catch (e) {
+            console.error("Errore in add_new_user: ", e);
+            Swal.fire('Errore Applicazione', 'Impossibile inizializzare il form di creazione. Controllare la console per i dettagli.', 'error');
+        }
+    }
+
+    /**
+     * Apre la modale per modificare un utente. 
+     * Per gli utenti solo esterni, pre-compila i campi con i dati noti
+     * e carica i permessi dal sistema esterno.
+     * Da questo form è possibile sia modificare solo i dati esterni, sia creare
+     * il corrispettivo utente interno fornendo una password e permessi interni.
+     */
+    function edit_external_user(operatore, email, userid) {
+        try {
+            // Titolo generico perché da qui si può sia modificare l'utente esterno
+            // sia creare il corrispettivo interno.
+            $('#title_doc').text('Modifica Utente');
+    
+            const userData = {
+                name: operatore,
+                email: email,
+                username: userid
+            };
+    
+            window.moduloEdit.load_info(userData);
+            $('#modalvalue').modal('show');
+        } catch (e) {
+            console.error("Errore in edit_external_user: ", e);
+            Swal.fire('Errore Applicazione', 'Impossibile inizializzare il form di modifica. Controllare la console per i dettagli.', 'error');
+        }
+    }
+
     $(document).ready(function() {
         $('#sidebarCollapse').on('click', function () {
             $('#sidebar').toggleClass('active');

@@ -323,162 +323,168 @@ public function __construct()
         }
 	}	
 
-	public function update_user(Request $request) {
-		$id_user = $request->input('id_user');
+	/**
+     * Gestisce la creazione e l'aggiornamento di un utente, sia interno che esterno.
+     */
+    public function update_user(Request $request)
+    {
+        $userId = $request->input('id_user');
+        $isCreating = empty($userId);
 
+        // 1. VALIDAZIONE
+        // Le regole di validazione sono dinamiche per gestire la creazione e la modifica.
 		$validator = Validator::make($request->all(), [
-			'id_user' => 'required|exists:utenti,id',
-			'operatore' => 'required|string|min:5',
+			'id_user' => 'nullable|integer', // Accetta ID nullo per la creazione
+			'operatore' => 'required|string|max:30',
 			'userid' => [
 				'required',
 				'string',
-				'max:20',
-				Rule::unique('utenti')->ignore($id_user),
-			],
-			'email' => [
-				'nullable',
-				'email',
-				'max:255',
-				Rule::unique('utenti')->ignore($id_user),
-			],
-			'password' => [
-				'required',
-				'string',
 				'max:15',
-				//Password::min(8)->mixedCase()->numbers()->symbols()
+                // Se stiamo creando, lo userid deve essere unico.
+                // Se stiamo modificando, deve essere unico o appartenere all'utente corrente.
+                $isCreating ? Rule::unique('utenti', 'userid') : Rule::unique('utenti', 'userid')->ignore($userId),
 			],
-			'admin_lotti' => 'nullable|integer|in:0,1,2,9',
+			'email' => 'nullable|email|max:120',
+			'password' => 'required|string|max:15', // La password è sempre inviata dal frontend
+			'wants_to_create_internal' => 'required|boolean',
+			'wants_to_sync_external' => 'required|boolean',
+            // Aggiungi qui altre regole per i permessi se necessario
+			'admin_lotti' => 'nullable|integer|in:0,1,9',
 			'ruoli_cert' => 'nullable|integer|in:1,2,4,5,6,7,10,999',
 			'admin_sos' => 'nullable|integer|in:0,1,2,10,9',
 			'rst_sos' => 'nullable|integer|in:0,1',
 			'admin_lp' => 'nullable|integer|in:1,10',
 			'admin_mp' => 'nullable|integer|in:0,1,10',
-			'vest_access' => 'nullable|integer|in:0,1',
+			'vest_access' => 'nullable|string|in:"","0","1"',
 			'nc_access' => 'nullable|integer|in:0,1,2,3,4,5',
-			// Aggiungo validazione per i permessi esterni
             'permessi_firma_cr' => 'nullable|integer|in:0,1',
             'permessi_firma_r' => 'nullable|integer|in:0,1',
             'permessi_firma_d' => 'nullable|integer|in:0,1',
             'permessi_reparti' => 'nullable|array',
             'permessi_reparti.*' => 'integer',
-			'wants_to_sync_external' => 'boolean',
 		]);
-	
+
 		if ($validator->fails()) {
-			return response()->json([
-				'response' => 'KO', 
-				'message' => implode('<br>', $validator->errors()->all())
-			], 422);
+			return response()->json(['response' => 'KO', 'message' => $validator->errors()->first()], 422);
 		}
 
-        $validated = $validator->validated();
-		$user = utenti::find($validated['id_user']);
-	
-		$user->operatore = $validated['operatore'];
-		$user->userid = $validated['userid'];
-		$user->email = $validated['email'];
-	
-		// Save the plain-text password for legacy apps
-		$user->passkey = $validated['password'];
-		// Hash the password for the 'password' column (for Laravel Auth)
-		$user->password_hash = Hash::make($validated['password']);
-	
-		$user->admin_lotti = $validated['admin_lotti'];
-		$user->ruoli_cert = $validated['ruoli_cert'];
-		$user->admin_sos = $validated['admin_sos'];
-		$user->rst_sos = $validated['rst_sos'];
-		$user->admin_lp = $validated['admin_lp'];
-		$user->admin_mp = $validated['admin_mp'];
-		$user->vest_access = $validated['vest_access'];
-		$user->nc_access = $validated['nc_access'];
+        $data = $validator->validated();
 
-		// Salvo anche i permessi esterni nel DB locale (come cache/sorgente di verità)
-        // L'API esterna verrà chiamata per la sincronizzazione
-        if ($request->has('permessi_firma_cr')) {
-            $user->permessi_firma_cr = $validated['permessi_firma_cr'] ?? 0;
-            $user->permessi_firma_r = $validated['permessi_firma_r'] ?? 0;
-            $user->permessi_firma_d = $validated['permessi_firma_d'] ?? 0;
-            // NON salvo permessi_reparti in locale, come da richiesta
-        }
-	
-		$user->save();
-
-        // La sincronizzazione dei permessi esterni avviene se:
-        // 1. L'utente era già esterno (e quindi si stanno aggiornando i permessi)
-        // 2. L'utente NON era esterno, ma l'operatore ha esplicitamente chiesto di crearlo (wants_to_sync_external)
-        // E, in entrambi i casi, se sono stati inviati i dati dei permessi nel form.
-        $is_external_check = $this->checkExternalUserExists($user->userid);
-        $should_sync_external = !$is_external_check['error'] && ($is_external_check['exists'] || $request->input('wants_to_sync_external', false));
-
-      
-	    if ($should_sync_external && $request->has('permessi_firma_cr')) {
-            $syncResult = $this->syncExternalPermissions($user->userid, $validated);
-
-            if (!$syncResult['success']) {
-                // L'aggiornamento locale è andato a buon fine, ma la sincronizzazione esterna no.
-                // Informo l'utente.
-                return response()->json([
-                    'response' => 'PARTIAL_OK',
-                    'message' => 'Utente interno aggiornato, ma si è verificato un errore durante la sincronizzazione dei permessi esterni: ' . $syncResult['message'],
-                    'user' => $user
-                ]);
+        // 2. CREAZIONE O MODIFICA UTENTE INTERNO
+        // Se è una creazione (da esterno o da zero), istanzia un nuovo utente.
+        if ($isCreating) {
+            $user = new utenti();
+        } else {
+            $user = utenti::find($data['id_user']);
+            if (!$user) {
+                return response()->json(['response' => 'KO', 'message' => 'Utente interno non trovato.'], 404);
             }
         }
-		
-	
-		return response()->json(['response' => 'OK', 'user' => $user]);
-	}
 
-	private function syncExternalPermissions($userId, $permissions)
+        // 3. POPOLAMENTO DATI UTENTE
+        $user->operatore = $data['operatore'];
+        $user->userid = $data['userid'];
+        $user->email = $data['email'];
+        
+        // Gestione password: hash per il login, chiaro per compatibilità
+        $user->password_hash = Hash::make($data['password']);
+        $user->passkey = $data['password'];
+
+        // Assegnazione permessi interni.
+        // L'errore "Column cannot be null" si verifica perché il frontend invia 'null'
+        // per i permessi delle app non selezionate, e $request->input('key', 'default')
+        // non usa il default se la chiave esiste con valore null.
+        // Usiamo l'operatore 'null coalescing' (??) per risolvere il problema.
+        $user->admin_lotti = $request->input('admin_lotti') ?? 9;
+        $user->ruoli_cert = $request->input('ruoli_cert') ?? 999;
+        $user->admin_sos = $request->input('admin_sos') ?? 9;
+        $user->rst_sos = $request->input('rst_sos') ?? 0;
+        $user->admin_lp = $request->input('admin_lp') ?? 10;
+        $user->admin_mp = $request->input('admin_mp') ?? 0;
+        $user->nc_access = $request->input('nc_access') ?? 0;
+
+        // Gestione specifica per 'vest_access': il frontend invia '' per 'Disable'.
+        // La colonna del DB è INT e NULLABLE, quindi '' o null devono essere convertiti in null.
+        $vest_access_value = $request->input('vest_access');
+        $user->vest_access = ($vest_access_value === '' || $vest_access_value === null) ? null : $vest_access_value;
+
+		// Poiché la tabella 'utenti' non ha i campi 'created_at' e 'updated_at',
+        // disabilitiamo temporaneamente i timestamp per questo salvataggio.
+        $user->timestamps = false;
+
+		$user->save();
+
+        // 4. SINCRONIZZAZIONE ESTERNA
+        $externalSyncSuccess = true;
+        $externalSyncMessage = '';
+        
+        // Sincronizza se l'utente è già esterno, o se si sta creando/abilitando esternamente.
+        $isAlreadyExternal = !$isCreating ? $this->checkExternalUserExists($user->userid)['exists'] : false;
+        if ($isAlreadyExternal || $data['wants_to_sync_external'] || $data['wants_to_create_internal']) {
+            $externalResponse = $this->syncWithExternalApi($user, $request);
+            if ($externalResponse['status'] !== 'ok') {
+                $externalSyncSuccess = false;
+                $externalSyncMessage = $externalResponse['message'];
+            }
+        }
+
+        // 5. RISPOSTA AL FRONTEND
+        if ($externalSyncSuccess) {
+            return response()->json([
+                'response' => 'OK',
+                'message' => 'Utente aggiornato con successo.',
+                'user' => $user->fresh() // Invia i dati aggiornati per l'update della tabella
+            ]);
+        } else {
+            return response()->json([
+                'response' => 'PARTIAL_OK',
+                'message' => 'Utente interno salvato, ma la sincronizzazione esterna è fallita: ' . $externalSyncMessage,
+                'user' => $user->fresh()
+            ]);
+        }
+    }
+
+    /**
+     * Funzione helper per comunicare con l'API esterna.
+     */
+    private function syncWithExternalApi(utenti $user, Request $request)
     {
-        // L'URL dell'API esterna per l'aggiornamento (da creare)
-        $apiUrl = 'https://www.liofilchemstore.it/servizi/api_login_ext.php';
-		// Per maggiore sicurezza, questo token andrebbe memorizzato nel file .env
+        // NOTA: Il token dovrebbe essere in un file .env per sicurezza.
         $apiToken = 'un-token-segreto-molto-sicuro-da-cambiare';
+        $apiUrl = 'https://www.liofilchemstore.it/servizi/api_login_ext.php';
 
-        // Formatta l'array dei reparti nella stringa 'R1R;R2R'
         $repartoString = null;
-        if (!empty($permissions['permessi_reparti'])) {
-            $repartoString = collect($permissions['permessi_reparti'])
+        if ($request->has('permessi_reparti') && is_array($request->input('permessi_reparti'))) {
+            $repartoString = collect($request->input('permessi_reparti'))
                 ->map(function ($id) {
                     return "R{$id}R";
                 })
                 ->implode(';');
         }
 
-        // Prepara i dati da inviare
-        $dataToSend = [
-			'api_token' => $apiToken,
+
+        $response = Http::asForm()->post($apiUrl, [
+            'api_token' => $apiToken,
             'action' => 'update_permissions',
-            'userid' => $userId,
-            'operatore' => $permissions['operatore'],
-            'permessi_firma_cr' => $permissions['permessi_firma_cr'] ?? 0,
-            'permessi_firma_r' => $permissions['permessi_firma_r'] ?? 0,
-            'permessi_firma_d' => $permissions['permessi_firma_d'] ?? 0,
+            'userid' => $user->userid,
+            'operatore' => $user->operatore,
+            'passkey' => $user->passkey, // Invia la password in chiaro come richiesto dall'API esterna
+            'permessi_firma_cr' => $request->input('permessi_firma_cr', 0),
+            'permessi_firma_r' => $request->input('permessi_firma_r', 0),
+            'permessi_firma_d' => $request->input('permessi_firma_d', 0),
             'reparto' => $repartoString,
-            'passkey' => $permissions['password'], // Aggiungo la password in chiaro per la creazione
-        ];
+        ]);
 
-        try {
-            $response = Http::asForm()->post($apiUrl, $dataToSend);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                if (isset($data['status']) && $data['status'] === 'ok') {
-                    return ['success' => true];
-                } else {
-                    $errorMessage = $data['message'] ?? 'L\'API esterna ha restituito un errore sconosciuto.';
-                    Log::error("Errore sincronizzazione permessi per userid $userId: " . ($data['message'] ?? json_encode($data)));
-                    return ['success' => false, 'message' => $errorMessage];
-                }
-            } else {
-                Log::error("Errore HTTP durante la sincronizzazione dei permessi per userid $userId: " . $response->status());
-                return ['success' => false, 'message' => 'Il servizio esterno non è raggiungibile (Errore HTTP ' . $response->status() . ').'];
+        if ($response->successful()) {
+            $body = $response->json();
+            // L'API esterna risponde con 'ok' sia per l'update che per l'insert
+            if (isset($body['status']) && $body['status'] === 'ok') {
+                return ['status' => 'ok', 'message' => $body['message'] ?? 'Sincronizzazione completata.'];
             }
-        } catch (\Exception $e) {
-            Log::error("Eccezione durante la sincronizzazione dei permessi per userid $userId: " . $e->getMessage());
-            return ['success' => false, 'message' => 'Errore di connessione con il servizio esterno.'];
+            return ['status' => 'error', 'message' => $body['message'] ?? 'Errore sconosciuto dall\'API esterna.'];
         }
+
+        return ['status' => 'error', 'message' => 'Errore di connessione con l\'API esterna (HTTP ' . $response->status() . ').'];
     }
 
     private function syncExternalUserStatus($userId, $action)
