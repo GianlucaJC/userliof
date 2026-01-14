@@ -1,8 +1,3 @@
-<?php
-use App\Models\User;
-	$id = Auth::user()->id;
-	$user = User::find($id);
-?>
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>

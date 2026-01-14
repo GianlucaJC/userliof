@@ -1,9 +1,3 @@
-<?php
-use App\Models\User;
-	$id = Auth::user()->id;
-	$user = User::find($id);
-?>
-
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -308,96 +302,7 @@ use App\Models\User;
 
 <!-- Custom App Scripts -->
 <script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.085"></script>
-<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.207"></script>
-
-<script>
-    /**
-     * Apre la modale per creare un utente completamente nuovo (non presente
-     * né nel sistema interno né in quello esterno).
-     */
-    function add_new_user() {
-        try {
-            $('#title_doc').text('Aggiungi Nuovo Utente');
-            window.moduloEdit.create_new(); // Chiama il nuovo metodo in Vue
-            $('#modalvalue').modal('show');
-        } catch (e) {
-            console.error("Errore in add_new_user: ", e);
-            Swal.fire('Errore Applicazione', 'Impossibile inizializzare il form di creazione. Controllare la console per i dettagli.', 'error');
-        }
-    }
-
-    /**
-     * Apre la modale per modificare un utente. 
-     * Per gli utenti solo esterni, pre-compila i campi con i dati noti
-     * e carica i permessi dal sistema esterno.
-     * Da questo form è possibile sia modificare solo i dati esterni, sia creare
-     * il corrispettivo utente interno fornendo una password e permessi interni.
-     */
-    function edit_external_user(operatore, email, userid) {
-        try {
-            // Titolo generico perché da qui si può sia modificare l'utente esterno
-            // sia creare il corrispettivo interno.
-            $('#title_doc').text('Modifica Utente');
-    
-            const userData = {
-                name: operatore,
-                email: email,
-                username: userid
-            };
-    
-            window.moduloEdit.load_info(userData);
-            $('#modalvalue').modal('show');
-        } catch (e) {
-            console.error("Errore in edit_external_user: ", e);
-            Swal.fire('Errore Applicazione', 'Impossibile inizializzare il form di modifica. Controllare la console per i dettagli.', 'error');
-        }
-    }
-
-    $(document).ready(function() {
-        $('#sidebarCollapse').on('click', function () {
-            $('#sidebar').toggleClass('active');
-        });
-    });
-
-    // Script per gestire la visualizzazione della tabella utenti con loader
-    (function($) {
-        var $loader = $('#users-table-loader');
-        var $container = $('#tb_utenti').closest('.table-responsive');
-        var startTime = new Date().getTime();
-        var minDisplayTime = 400; // Ritardo minimo in millisecondi per mostrare lo spinner.
-
-        // Funzione per nascondere il loader e mostrare la tabella, rispettando il tempo minimo
-        var completeLoading = function() {
-            var elapsedTime = new Date().getTime() - startTime;
-            var timeToShow = minDisplayTime - elapsedTime;
-
-            if (timeToShow < 0) {
-                timeToShow = 0;
-            }
-
-            setTimeout(function() {
-                $loader.hide();
-                $container.show();
-            }, timeToShow);
-        };
-
-        var checkInterval = setInterval(function() {
-            if ($('#tb_utenti').hasClass('dataTable')) {
-                clearInterval(checkInterval);
-                checkInterval = null; // Pulisce la variabile per il timeout di sicurezza
-                completeLoading();
-            }
-        }, 100); // Controlla ogni 100ms
-
-        setTimeout(function() {
-            if (checkInterval) { // Se il controllo è ancora attivo dopo 5 secondi (timeout di sicurezza)
-                clearInterval(checkInterval);
-                $loader.hide();
-                $container.show(); // Forza la visualizzazione per evitare blocchi
-            }
-        }, 5000);
-    })(jQuery);
-</script>
+<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.210"></script>
 
 </body>
 </html>

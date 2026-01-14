@@ -1,5 +1,90 @@
+/**
+ * Apre la modale per creare un utente completamente nuovo (non presente
+ * né nel sistema interno né in quello esterno).
+ */
+function add_new_user() {
+    try {
+        $('#title_doc').text('Aggiungi Nuovo Utente');
+        window.moduloEdit.create_new(); // Chiama il nuovo metodo in Vue
+        $('#modalvalue').modal('show');
+    } catch (e) {
+        console.error("Errore in add_new_user: ", e);
+        Swal.fire('Errore Applicazione', 'Impossibile inizializzare il form di creazione. Controllare la console per i dettagli.', 'error');
+    }
+}
+
+/**
+ * Apre la modale per modificare un utente. 
+ * Per gli utenti solo esterni, pre-compila i campi con i dati noti
+ * e carica i permessi dal sistema esterno.
+ * Da questo form è possibile sia modificare solo i dati esterni, sia creare
+ * il corrispettivo utente interno fornendo una password e permessi interni.
+ */
+function edit_external_user(operatore, email, userid) {
+    try {
+        // Titolo generico perché da qui si può sia modificare l'utente esterno
+        // sia creare il corrispettivo interno.
+        $('#title_doc').text('Modifica Utente');
+
+        const userData = {
+            name: operatore,
+            email: email,
+            username: userid
+        };
+
+        window.moduloEdit.load_info(userData);
+        $('#modalvalue').modal('show');
+    } catch (e) {
+        console.error("Errore in edit_external_user: ", e);
+        Swal.fire('Errore Applicazione', 'Impossibile inizializzare il form di modifica. Controllare la console per i dettagli.', 'error');
+    }
+}
+
 $(document).ready( function () {
 	imposta_app()
+
+    $('#sidebarCollapse').on('click', function () {
+        $('#sidebar').toggleClass('active');
+    });
+
+    // Script per gestire la visualizzazione della tabella utenti con loader
+    (function($) {
+        var $loader = $('#users-table-loader');
+        var $container = $('#tb_utenti').closest('.table-responsive');
+        var startTime = new Date().getTime();
+        var minDisplayTime = 400; // Ritardo minimo in millisecondi per mostrare lo spinner.
+
+        // Funzione per nascondere il loader e mostrare la tabella, rispettando il tempo minimo
+        var completeLoading = function() {
+            var elapsedTime = new Date().getTime() - startTime;
+            var timeToShow = minDisplayTime - elapsedTime;
+
+            if (timeToShow < 0) {
+                timeToShow = 0;
+            }
+
+            setTimeout(function() {
+                $loader.hide();
+                $container.show();
+            }, timeToShow);
+        };
+
+        var checkInterval = setInterval(function() {
+            if ($('#tb_utenti').hasClass('dataTable')) {
+                clearInterval(checkInterval);
+                checkInterval = null; // Pulisce la variabile per il timeout di sicurezza
+                completeLoading();
+            }
+        }, 100); // Controlla ogni 100ms
+
+        setTimeout(function() {
+            if (checkInterval) { // Se il controllo è ancora attivo dopo 5 secondi (timeout di sicurezza)
+                clearInterval(checkInterval);
+                $loader.hide();
+                $container.show(); // Forza la visualizzazione per evitare blocchi
+            }
+        }, 5000);
+    })(jQuery);
 })  
 function imposta_app() {
 
@@ -85,7 +170,7 @@ function imposta_app() {
 								<div v-if="!is_internal">
 									<div class="form-check form-switch mb-3">
 										<input class="form-check-input" type="checkbox" role="switch" id="createInternalSwitch" v-model="wants_to_create_internal">
-										<label class="form-check-label" for="createInternalSwitch">Crea/Abilita utente anche su sistema interno</label>
+										<label class="form-check-label" for="createInternalSwitch">Crea/Abilita utente su sistema interno</label>
 									</div>
 
 									<div v-if="wants_to_create_internal" class="mb-3">
@@ -663,40 +748,46 @@ function imposta_app() {
 				})
                 .then(response => response.json())
                 .then(data => {
-                    // Gestisce sia il successo completo (OK) che parziale (PARTIAL_OK)
-                    if ((data.response === 'OK' || data.response === 'PARTIAL_OK') && data.user) {
+                    // La condizione principale deve basarsi solo su data.response.
+                    // L'oggetto data.user potrebbe essere null se l'operazione è solo esterna.
+                    if (data.response === 'OK' || data.response === 'PARTIAL_OK') {
 
-                        // Mostra il messaggio appropriato
                         if (data.response === 'OK') {
                             Swal.fire({
-                                title: 'Aggiornato!',
-                                text: 'Utente aggiornato correttamente.',
+                                title: 'Successo!',
+                                text: data.message, // Usa il messaggio dinamico dal server
                                 icon: 'success',
                                 timer: 1500,
                                 showConfirmButton: false
                             });
                         } else { // PARTIAL_OK
                              Swal.fire({
-                                title: 'Aggiornamento Parziale',
-                                text: data.message, // Messaggio di avviso dal server
+                                title: 'Operazione Parziale',
+                                text: data.message,
                                 icon: 'warning',
                             });
                         }
 
-						// Aggiorna la riga nella tabella dinamicamente
-						var table = $('#tb_utenti').DataTable();
-						var row = table.row('#tr' + data.user.id);
-						if (row.length) {
-							var rowNode = row.node();
-							// Aggiorna il contenuto delle celle
-							$(rowNode).find('td').eq(1).text(data.user.userid);
-							$(rowNode).find('td').eq(2).html(`<i>${data.user.operatore}</i>`);
-							$(rowNode).find('td').eq(3).text(data.user.email);
-							// Invalida la riga per far ricalcolare l'ordinamento a DataTables e ridisegna
-							row.invalidate().draw(false);
-						}
+                        // Aggiorna la tabella solo se l'oggetto utente è stato restituito
+                        if (data.user) {
+                            var table = $('#tb_utenti').DataTable();
+                            var row = table.row('#tr' + data.user.id);
+                            if (row.length) {
+                                var rowNode = row.node();
+                                $(rowNode).find('td').eq(1).text(data.user.userid);
+                                $(rowNode).find('td').eq(2).html(`<i>${data.user.operatore}</i>`);
+                                $(rowNode).find('td').eq(3).text(data.user.email);
+                                row.invalidate().draw(false);
+                            }
+                        }
 
-						this.close_edit();
+                        // Se stavamo creando un nuovo utente, ricarica la pagina per aggiornare la tabella.
+                        // È la soluzione più semplice e robusta per mostrare il nuovo utente.
+                        if (!this.id_user) {
+                            setTimeout(() => { window.location.reload(); }, 1600);
+                        } else {
+						    this.close_edit();
+                        }
                     } else {
                         Swal.fire('Errore!', data.message || 'Si è verificato un errore durante il salvataggio.', 'error');
                     }

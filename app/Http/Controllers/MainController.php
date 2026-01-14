@@ -324,31 +324,20 @@ public function __construct()
 	}	
 
 	/**
-     * Gestisce la creazione e l'aggiornamento di un utente, sia interno che esterno.
+     * Gestisce la creazione e l'aggiornamento di un utente in base agli switch
+     * per il sistema interno ed esterno.
      */
     public function update_user(Request $request)
     {
-        $userId = $request->input('id_user');
-        $isCreating = empty($userId);
-
-        // 1. VALIDAZIONE
-        // Le regole di validazione sono dinamiche per gestire la creazione e la modifica.
+        // 1. VALIDAZIONE DI BASE
 		$validator = Validator::make($request->all(), [
-			'id_user' => 'nullable|integer', // Accetta ID nullo per la creazione
+			'id_user' => 'nullable|integer',
 			'operatore' => 'required|string|max:30',
-			'userid' => [
-				'required',
-				'string',
-				'max:15',
-                // Se stiamo creando, lo userid deve essere unico.
-                // Se stiamo modificando, deve essere unico o appartenere all'utente corrente.
-                $isCreating ? Rule::unique('utenti', 'userid') : Rule::unique('utenti', 'userid')->ignore($userId),
-			],
+			'userid' => 'required|string|max:15',
 			'email' => 'nullable|email|max:120',
-			'password' => 'required|string|max:15', // La password è sempre inviata dal frontend
+			'password' => 'nullable|string|max:15',
 			'wants_to_create_internal' => 'required|boolean',
 			'wants_to_sync_external' => 'required|boolean',
-            // Aggiungi qui altre regole per i permessi se necessario
 			'admin_lotti' => 'nullable|integer|in:0,1,9',
 			'ruoli_cert' => 'nullable|integer|in:1,2,4,5,6,7,10,999',
 			'admin_sos' => 'nullable|integer|in:0,1,2,10,9',
@@ -357,91 +346,134 @@ public function __construct()
 			'admin_mp' => 'nullable|integer|in:0,1,10',
 			'vest_access' => 'nullable|string|in:"","0","1"',
 			'nc_access' => 'nullable|integer|in:0,1,2,3,4,5',
-            'permessi_firma_cr' => 'nullable|integer|in:0,1',
-            'permessi_firma_r' => 'nullable|integer|in:0,1',
-            'permessi_firma_d' => 'nullable|integer|in:0,1',
-            'permessi_reparti' => 'nullable|array',
-            'permessi_reparti.*' => 'integer',
+			'permessi_firma_cr' => 'nullable|integer|in:0,1',
+			'permessi_firma_r' => 'nullable|integer|in:0,1',
+			'permessi_firma_d' => 'nullable|integer|in:0,1',
+			'permessi_reparti' => 'nullable|array',
+			'permessi_reparti.*' => 'integer',
 		]);
 
 		if ($validator->fails()) {
 			return response()->json(['response' => 'KO', 'message' => $validator->errors()->first()], 422);
 		}
 
-        $data = $validator->validated();
+		$data = $validator->validated();
 
-        // 2. CREAZIONE O MODIFICA UTENTE INTERNO
-        // Se è una creazione (da esterno o da zero), istanzia un nuovo utente.
-        if ($isCreating) {
-            $user = new utenti();
-        } else {
-            $user = utenti::find($data['id_user']);
-            if (!$user) {
-                return response()->json(['response' => 'KO', 'message' => 'Utente interno non trovato.'], 404);
-            }
-        }
+		if (!$data['wants_to_create_internal'] && !$data['wants_to_sync_external']) {
+			return response()->json(['response' => 'KO', 'message' => 'Selezionare se creare/abilitare l\'utente nel sistema interno, esterno o entrambi.'], 422);
+		}
 
-        // 3. POPOLAMENTO DATI UTENTE
-        $user->operatore = $data['operatore'];
-        $user->userid = $data['userid'];
-        $user->email = $data['email'];
-        
-        // Gestione password: hash per il login, chiaro per compatibilità
-        $user->password_hash = Hash::make($data['password']);
-        $user->passkey = $data['password'];
+		$user = null;
+		$internalSaveSuccess = null; // null: non tentato, true: successo, false: fallito
+		$externalSyncSuccess = null; // null: non tentato, true: successo, false: fallito
+		$externalSyncMessage = '';
 
-        // Assegnazione permessi interni.
-        // L'errore "Column cannot be null" si verifica perché il frontend invia 'null'
-        // per i permessi delle app non selezionate, e $request->input('key', 'default')
-        // non usa il default se la chiave esiste con valore null.
-        // Usiamo l'operatore 'null coalescing' (??) per risolvere il problema.
-        $user->admin_lotti = $request->input('admin_lotti') ?? 9;
-        $user->ruoli_cert = $request->input('ruoli_cert') ?? 999;
-        $user->admin_sos = $request->input('admin_sos') ?? 9;
-        $user->rst_sos = $request->input('rst_sos') ?? 0;
-        $user->admin_lp = $request->input('admin_lp') ?? 10;
-        $user->admin_mp = $request->input('admin_mp') ?? 0;
-        $user->nc_access = $request->input('nc_access') ?? 0;
+		// 2. GESTIONE UTENTE INTERNO
+		if ($data['wants_to_create_internal']) {
+			$userId = $data['id_user'];
+			$isNewInternalUser = empty($userId);
 
-        // Gestione specifica per 'vest_access': il frontend invia '' per 'Disable'.
-        // La colonna del DB è INT e NULLABLE, quindi '' o null devono essere convertiti in null.
-        $vest_access_value = $request->input('vest_access');
-        $user->vest_access = ($vest_access_value === '' || $vest_access_value === null) ? null : $vest_access_value;
+			$internalValidator = Validator::make($data, [
+				'userid' => $isNewInternalUser
+					? Rule::unique('utenti', 'userid')
+					: Rule::unique('utenti', 'userid')->ignore($userId),
+				'password' => 'required|string|max:15',
+			]);
 
-		// Poiché la tabella 'utenti' non ha i campi 'created_at' e 'updated_at',
-        // disabilitiamo temporaneamente i timestamp per questo salvataggio.
-        $user->timestamps = false;
+			if ($internalValidator->fails()) {
+				return response()->json(['response' => 'KO', 'message' => "Errore dati utente interno: " . $internalValidator->errors()->first()], 422);
+			}
 
-		$user->save();
+			try {
+				if ($isNewInternalUser) {
+					$user = new utenti();
+				} else {
+					$user = utenti::find($userId);
+					if (!$user) {
+						return response()->json(['response' => 'KO', 'message' => 'Utente interno da modificare non trovato.'], 404);
+					}
+				}
 
-        // 4. SINCRONIZZAZIONE ESTERNA
-        $externalSyncSuccess = true;
-        $externalSyncMessage = '';
-        
-        // Sincronizza se l'utente è già esterno, o se si sta creando/abilitando esternamente.
-        $isAlreadyExternal = !$isCreating ? $this->checkExternalUserExists($user->userid)['exists'] : false;
-        if ($isAlreadyExternal || $data['wants_to_sync_external'] || $data['wants_to_create_internal']) {
-            $externalResponse = $this->syncWithExternalApi($user, $request);
-            if ($externalResponse['status'] !== 'ok') {
-                $externalSyncSuccess = false;
-                $externalSyncMessage = $externalResponse['message'];
-            }
-        }
+				$user->operatore = $data['operatore'];
+				$user->userid = $data['userid'];
+				$user->email = $data['email'];
+				$user->password_hash = Hash::make($data['password']);
+				$user->passkey = $data['password'];
+				$user->attivo = 1;
+				$user->admin_lotti = $request->input('admin_lotti') ?? 9;
+				$user->ruoli_cert = $request->input('ruoli_cert') ?? 999;
+				$user->admin_sos = $request->input('admin_sos') ?? 9;
+				$user->rst_sos = $request->input('rst_sos') ?? 0;
+				$user->admin_lp = $request->input('admin_lp') ?? 10;
+				$user->admin_mp = $request->input('admin_mp') ?? 0;
+				$user->nc_access = $request->input('nc_access') ?? 0;
+				$vest_access_value = $request->input('vest_access');
+				$user->vest_access = ($vest_access_value === '' || $vest_access_value === null) ? null : $vest_access_value;
 
-        // 5. RISPOSTA AL FRONTEND
-        if ($externalSyncSuccess) {
-            return response()->json([
-                'response' => 'OK',
-                'message' => 'Utente aggiornato con successo.',
-                'user' => $user->fresh() // Invia i dati aggiornati per l'update della tabella
-            ]);
-        } else {
-            return response()->json([
-                'response' => 'PARTIAL_OK',
-                'message' => 'Utente interno salvato, ma la sincronizzazione esterna è fallita: ' . $externalSyncMessage,
-                'user' => $user->fresh()
-            ]);
-        }
+				$user->timestamps = false;
+				$user->save();
+				$internalSaveSuccess = true;
+			} catch (\Exception $e) {
+				Log::error("Errore salvataggio utente interno: " . $e->getMessage());
+				$internalSaveSuccess = false;
+			}
+		}
+
+		// 3. GESTIONE UTENTE ESTERNO
+		if ($data['wants_to_sync_external']) {
+			if (empty($data['password'])) {
+				return response()->json(['response' => 'KO', 'message' => 'La password è richiesta per la sincronizzazione con il sistema esterno.'], 422);
+			}
+
+			$userForApi = $user;
+			if (!$userForApi) {
+				$userForApi = new utenti();
+				$userForApi->operatore = $data['operatore'];
+				$userForApi->userid = $data['userid'];
+			}
+			$userForApi->passkey = $data['password'];
+
+			$externalResponse = $this->syncWithExternalApi($userForApi, $request);
+			if ($externalResponse['status'] === 'ok') {
+				$externalSyncSuccess = true;
+			} else {
+				$externalSyncSuccess = false;
+				$externalSyncMessage = $externalResponse['message'];
+			}
+		}
+
+		// 4. RISPOSTA FINALE
+		$messages = [];
+		$isError = false;
+
+		if ($internalSaveSuccess === true) {
+			$messages[] = 'Utente interno salvato con successo.';
+		} elseif ($internalSaveSuccess === false) {
+			$messages[] = 'Salvataggio utente interno fallito.';
+			$isError = true;
+		}
+
+		if ($externalSyncSuccess === true) {
+			$messages[] = 'Sincronizzazione esterna completata.';
+		} elseif ($externalSyncSuccess === false) {
+			$messages[] = 'Sincronizzazione esterna fallita: ' . $externalSyncMessage;
+			$isError = true;
+		}
+
+		if (empty($messages)) {
+			return response()->json(['response' => 'KO', 'message' => 'Nessuna operazione eseguita.'], 400);
+		}
+
+		$finalStatus = 'OK';
+		if ($isError) {
+			$finalStatus = ($internalSaveSuccess !== null && $externalSyncSuccess !== null) ? 'PARTIAL_OK' : 'KO';
+		}
+
+		return response()->json([
+			'response' => $finalStatus,
+			'message' => implode(' ', $messages),
+			'user' => $user ? $user->fresh() : null
+		]);
     }
 
     /**
