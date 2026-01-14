@@ -397,7 +397,7 @@ public function __construct()
 				$user->operatore = $data['operatore'];
 				$user->userid = $data['userid'];
 				$user->email = $data['email'];
-				$user->password_hash = Hash::make($data['password']);
+				$user->password_hash = Hash::make(strtolower($data['password']));
 				$user->passkey = $data['password'];
 				$user->attivo = 1;
 				$user->admin_lotti = $request->input('admin_lotti') ?? 9;
