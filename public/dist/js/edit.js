@@ -729,6 +729,24 @@ function imposta_app() {
 					wants_to_create_internal: this.wants_to_create_internal
                 };
 
+                // WORKAROUND: Il backend sembra aspettarsi che almeno uno dei flag 'wants_to_*'
+                // sia true, anche per gli aggiornamenti di utenti esistenti. Questa logica
+                // assicura che i flag corretti siano impostati in base al contesto.
+                if (this.id_user > 0) {
+                    // Questo è un AGGIORNAMENTO di un utente esistente.
+                    // Impostiamo i flag in base a dove l'utente esiste attualmente per soddisfare il backend.
+                    if (this.is_internal) formData.wants_to_create_internal = true;
+                    if (this.is_external) formData.wants_to_sync_external = true;
+                } else {
+                    // Questa è un'operazione di CREAZIONE (id_user è 0).
+                    if (this.is_external) {
+                        // Questo caso copre sia l'aggiornamento di un utente solo esterno,
+                        // sia la creazione di un utente interno a partire da uno esterno.
+                        // In entrambi i casi, stiamo sincronizzando/aggiornando i dati dell'utente esterno.
+                        formData.wants_to_sync_external = true;
+                    }
+                }
+
 				// Aggiungi i permessi esterni solo se il servizio è risultato disponibile
 				if (this.externalServiceAvailable) {
 					formData.permessi_firma_cr = this.permessi_firma_cr;

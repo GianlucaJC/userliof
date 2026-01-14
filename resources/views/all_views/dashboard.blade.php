@@ -302,7 +302,7 @@
 
 <!-- Custom App Scripts -->
 <script src="{{ URL::asset('/') }}dist/js/dash.js?ver=1.085"></script>
-<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.210"></script>
+<script src="{{ URL::asset('/') }}dist/js/edit.js?ver=1.211"></script>
 
 </body>
 </html>
